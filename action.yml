@@ -1,5 +1,5 @@
 name: Unicode Smuggling Guard
-description: Fail pull requests that hide invisible Unicode (ASCII smuggling, Trojan Source, zero-width) in code, docs and AI agent instructions.
+description: Fail PRs that hide invisible Unicode (ASCII smuggling, Trojan Source, zero-width) in code, docs and AI agent files.
 author: Raul Kivi
 branding:
   icon: eye-off

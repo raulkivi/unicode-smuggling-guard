@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-25
+
+### Fixed
+- Shortened the Action description to under 125 characters so the Action can be listed on GitHub Marketplace.
+
 ## [1.0.0] - 2026-09-25
 
 ### Added
