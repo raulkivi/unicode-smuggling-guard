@@ -2,7 +2,6 @@
 
 import enum
 import unicodedata
-from typing import Optional
 
 
 class Category(enum.Enum):
@@ -46,7 +45,7 @@ def is_variation_selector(ch: str) -> bool:
     return any(_in_range(cp, r) for r in VARIATION_SELECTOR_RANGES)
 
 
-def classify(ch: str) -> Optional[Category]:
+def classify(ch: str) -> Category | None:
     """Return the hidden-character category of *ch*, or None if it is ordinary."""
     cp = ord(ch)
     if _in_range(cp, TAG_RANGE):

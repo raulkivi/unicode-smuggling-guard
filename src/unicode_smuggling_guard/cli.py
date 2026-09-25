@@ -3,7 +3,7 @@
 import argparse
 import os
 import sys
-from typing import List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 from . import __version__
 from .categories import Category
@@ -39,14 +39,14 @@ def _plural(n: int, word: str) -> str:
     return f'{n} {word}' + ('' if n == 1 else 's')
 
 
-def _tally(results: Sequence[Tuple[str, Finding]], scanned: int) -> str:
+def _tally(results: Sequence[tuple[str, Finding]], scanned: int) -> str:
     if not results:
         return f'{PROG}: no hidden Unicode in {_plural(scanned, "file")}'
     dirty = len({path for path, _ in results})
     return f'{PROG}: {_plural(len(results), "hidden run")} in {dirty} of {_plural(scanned, "file")}'
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     missing = [p for p in args.paths if not os.path.exists(p)]
     if missing:
@@ -55,7 +55,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     ignored = {Category(value) for value in args.ignore}
     formatter = _FORMATTERS[args.format]
-    results: List[Tuple[str, Finding]] = []
+    results: list[tuple[str, Finding]] = []
     scanned = 0
     for path in iter_files(args.paths):
         text = read_text(path)

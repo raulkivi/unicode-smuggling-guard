@@ -2,7 +2,7 @@
 
 import os
 import subprocess
-from typing import Iterable, Iterator, List, Optional
+from collections.abc import Iterable, Iterator
 
 MAX_BYTES = 10 * 1024 * 1024
 
@@ -12,7 +12,7 @@ def _is_regular_file(path: str) -> bool:
     return os.path.isfile(path) and not os.path.islink(path)
 
 
-def _git_files(directory: str) -> Optional[List[str]]:
+def _git_files(directory: str) -> list[str] | None:
     """Tracked and untracked-but-not-ignored files, or None outside a git work tree."""
     try:
         listing = subprocess.run(
@@ -45,7 +45,7 @@ def iter_files(paths: Iterable[str]) -> Iterator[str]:
             yield os.path.normpath(path)
 
 
-def read_text(path: str, max_bytes: int = MAX_BYTES) -> Optional[str]:
+def read_text(path: str, max_bytes: int = MAX_BYTES) -> str | None:
     """File contents as text, or None for binary or oversized files."""
     if os.path.getsize(path) > max_bytes:
         return None

@@ -5,7 +5,9 @@ import pytest
 from unicode_smuggling_guard.categories import Category, classify
 
 
-@pytest.mark.parametrize('ch', ['a', 'Z', '0', ' ', '\t', '\n', '\r', '\f', '\xe9', '\u0436', '\u4e2d', '\U0001f600', '\u20e3'])
+@pytest.mark.parametrize(
+    'ch', ['a', 'Z', '0', ' ', '\t', '\n', '\r', '\f', '\xe9', '\u0436', '\u4e2d', '\U0001f600', '\u20e3']
+)
 def test_ordinary_characters_are_not_flagged(ch):
     assert classify(ch) is None
 
@@ -20,7 +22,9 @@ def test_variation_selectors(cp):
     assert classify(chr(cp)) is Category.VARIATION_SELECTOR
 
 
-@pytest.mark.parametrize('cp', [0x202A, 0x202B, 0x202C, 0x202D, 0x202E, 0x2066, 0x2067, 0x2068, 0x2069, 0x200E, 0x200F, 0x061C])
+@pytest.mark.parametrize(
+    'cp', [0x202A, 0x202B, 0x202C, 0x202D, 0x202E, 0x2066, 0x2067, 0x2068, 0x2069, 0x200E, 0x200F, 0x061C]
+)
 def test_bidi_controls(cp):
     assert classify(chr(cp)) is Category.BIDI
 

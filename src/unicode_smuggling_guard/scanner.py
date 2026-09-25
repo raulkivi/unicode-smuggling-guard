@@ -1,8 +1,8 @@
 """Finds runs of hidden characters in text, skipping their legitimate uses."""
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import FrozenSet, Iterator, List, Optional, Tuple
 
 from .categories import Category, classify, is_variation_selector
 
@@ -14,7 +14,7 @@ class Finding:
     line: int
     column: int
     category: Category
-    codepoints: Tuple[int, ...]
+    codepoints: tuple[int, ...]
 
 
 # Subdivision flags (England, Scotland, Wales): BLACK FLAG + 1-6 lowercase or
@@ -30,7 +30,7 @@ _KEYCAP_BASES = frozenset('#*0123456789')
 _BOM = '\ufeff'
 
 
-def _flag_tag_indices(text: str) -> FrozenSet[int]:
+def _flag_tag_indices(text: str) -> frozenset[int]:
     return frozenset(
         i for m in _FLAG_TAG_SEQUENCE.finditer(text) for i in range(m.start(1), m.end(1))
     )
@@ -59,7 +59,7 @@ def _selects_single_variant(text: str, i: int) -> bool:
     return i + 1 >= len(text) or not is_variation_selector(text[i + 1])
 
 
-def _suspicious(text: str, i: int, allowed_tags: FrozenSet[int]) -> Optional[Category]:
+def _suspicious(text: str, i: int, allowed_tags: frozenset[int]) -> Category | None:
     ch = text[i]
     category = classify(ch)
     if category is Category.TAG and i in allowed_tags:
@@ -77,8 +77,8 @@ def _suspicious(text: str, i: int, allowed_tags: FrozenSet[int]) -> Optional[Cat
 def _runs(text: str) -> Iterator[Finding]:
     allowed_tags = _flag_tag_indices(text)
     line, column = 1, 0
-    start: Optional[Tuple[int, int, Category]] = None
-    codepoints: List[int] = []
+    start: tuple[int, int, Category] | None = None
+    codepoints: list[int] = []
     for i, ch in enumerate(text):
         column += 1
         category = _suspicious(text, i, allowed_tags)
@@ -95,7 +95,7 @@ def _runs(text: str) -> Iterator[Finding]:
         yield Finding(*start, tuple(codepoints))
 
 
-def scan(text: str) -> List[Finding]:
+def scan(text: str) -> list[Finding]:
     """Return every run of hidden characters in *text*, in order."""
     if text.isascii() and not _ASCII_SUSPICIOUS.search(text):
         return []
