@@ -31,11 +31,12 @@ def test_directory_is_scanned(tmp_path, capsys):
     assert 'bad.md:1:2: bidi' in capsys.readouterr().out
 
 
-def test_github_format(tmp_path, capsys):
-    f = tmp_path / 'a.md'
-    f.write_text('a\u200bb', encoding='utf-8')
-    main(['--format', 'github', str(f)])
-    assert capsys.readouterr().out.startswith(f'::error file={f},line=1,col=2,')
+def test_github_format(tmp_path, capsys, monkeypatch):
+    # Relative, like the Action's repo paths; absolute Windows paths carry an escaped drive colon.
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / 'a.md').write_text('a\u200bb', encoding='utf-8')
+    main(['--format', 'github', 'a.md'])
+    assert capsys.readouterr().out.startswith('::error file=a.md,line=1,col=2,')
 
 
 def test_ignored_category_is_not_reported(tmp_path, capsys):
