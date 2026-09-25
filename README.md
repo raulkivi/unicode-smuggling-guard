@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/raulkivi/unicode-smuggling-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/raulkivi/unicode-smuggling-guard/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/raulkivi/unicode-smuggling-guard/badge)](https://scorecard.dev/viewer/?uri=github.com/raulkivi/unicode-smuggling-guard)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14938/badge)](https://www.bestpractices.dev/projects/14938)
 [![PyPI](https://img.shields.io/pypi/v/unicode-smuggling-guard)](https://pypi.org/project/unicode-smuggling-guard/)
 
 Catches invisible Unicode that hides instructions in code, docs and AI agent files: `CLAUDE.md`, `SKILL.md`, `AGENTS.md`, MCP tool descriptions and prompts.
