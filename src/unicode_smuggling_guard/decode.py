@@ -1,6 +1,6 @@
 """Recovers the text an attacker encoded into a run of hidden characters."""
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 from .categories import Category
 
@@ -18,7 +18,7 @@ def _variation_selector_byte(cp: int) -> int:
     return cp - 0xFE00 if cp <= 0xFE0F else cp - 0xE0100 + 16
 
 
-def _decode_variation_selectors(codepoints: Sequence[int]) -> Optional[str]:
+def _decode_variation_selectors(codepoints: Sequence[int]) -> str | None:
     try:
         return bytes(_variation_selector_byte(cp) for cp in codepoints).decode('utf-8')
     except UnicodeDecodeError:
@@ -35,7 +35,7 @@ def _has_readable_text(text: str) -> bool:
     return any(c.isprintable() and not c.isspace() for c in text)
 
 
-def decode(category: Category, codepoints: Sequence[int]) -> Optional[str]:
+def decode(category: Category, codepoints: Sequence[int]) -> str | None:
     """Return the hidden text, or None if the run encodes nothing readable."""
     decoder = _DECODERS.get(category)
     if decoder is None:

@@ -7,7 +7,7 @@ GitHub, and Markdown syntax for job summaries.
 
 import re
 import unicodedata
-from typing import Sequence, Tuple
+from collections.abc import Sequence
 
 from .decode import decode
 from .scanner import Finding
@@ -69,7 +69,7 @@ def _escape_markdown(text: str) -> str:
     return _MARKDOWN_SYNTAX.sub(r'\\\1', text)
 
 
-def summary_markdown(results: Sequence[Tuple[str, Finding]]) -> str:
+def summary_markdown(results: Sequence[tuple[str, Finding]]) -> str:
     """Markdown table for $GITHUB_STEP_SUMMARY."""
     if not results:
         return '### Hidden Unicode: none found\n'

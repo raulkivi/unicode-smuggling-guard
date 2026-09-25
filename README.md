@@ -135,6 +135,7 @@ classDiagram
 
 ```sh
 python -m pip install --require-hashes -r requirements-dev.txt
+python -m ruff check .
 python -m pytest                               # unit + property tests
 HYPOTHESIS_PROFILE=fuzz python -m pytest tests/test_properties.py   # long property run
 ```
@@ -152,6 +153,12 @@ Both run weekly in `fuzz.yml`.
 `uv pip compile --universal --python-version 3.10 --generate-hashes requirements-dev.in -o requirements-dev.txt`.
 
 Related: [md2p](https://github.com/raulkivi/md2p), a Markdown terminal renderer that highlights the same hidden characters inline.
+
+## Contributing
+
+- Report bugs, false positives and feature requests in [issues](https://github.com/raulkivi/unicode-smuggling-guard/issues).
+- Report vulnerabilities privately: see [SECURITY.md](SECURITY.md).
+- Contribute code with pull requests: see [CONTRIBUTING.md](CONTRIBUTING.md) for the process and requirements.
 
 ## License
 

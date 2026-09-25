@@ -22,7 +22,7 @@ def test_tags_skip_non_ascii_tag_controls():
 
 
 def test_variation_selectors_decode_bytes_as_utf8():
-    assert decode(Category.VARIATION_SELECTOR, _vs_bytes('rm -rf /'.encode())) == 'rm -rf /'
+    assert decode(Category.VARIATION_SELECTOR, _vs_bytes(b'rm -rf /')) == 'rm -rf /'
 
 
 def test_variation_selectors_decode_multibyte_utf8():

@@ -15,6 +15,7 @@ import urllib.error
 import urllib.request
 
 PROJECT = 'unicode-smuggling-guard'
+PYPI_FILES = 'https://files.pythonhosted.org/'
 ATTEMPTS, WAIT_SECONDS = 20, 15  # PyPI's JSON API can lag a publish by a minute or two.
 
 
@@ -22,7 +23,7 @@ def release_files(version):
     url = f'https://pypi.org/pypi/{PROJECT}/{version}/json'
     for _ in range(ATTEMPTS):
         try:
-            with urllib.request.urlopen(url) as response:
+            with urllib.request.urlopen(url) as response:  # noqa: S310 - fixed https URL
                 files = json.load(response)['urls']
             if files:
                 return files
@@ -40,7 +41,10 @@ def main():
     out = pathlib.Path('dist')
     out.mkdir(exist_ok=True)
     for f in release_files(tag[1:]):
-        with urllib.request.urlopen(f['url']) as response:
+        # Only PyPI's own file host; the URL comes from an API response, not from us.
+        if not f['url'].startswith(PYPI_FILES):
+            sys.exit(f"unexpected download URL: {f['url']!r}")
+        with urllib.request.urlopen(f['url']) as response:  # noqa: S310 - scheme and host checked above
             data = response.read()
         if hashlib.sha256(data).hexdigest() != f['digests']['sha256']:
             sys.exit(f"SHA-256 mismatch for {f['filename']}")
