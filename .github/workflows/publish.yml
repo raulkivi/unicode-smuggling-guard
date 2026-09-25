@@ -1,26 +1,31 @@
 # Publishes to PyPI with Trusted Publishing (no API token) when a GitHub
-# release is published. The PyPI publish action attaches PEP 740 build
-# attestations automatically.
+# release is published, then attaches the PyPI files with Sigstore signatures
+# to the release. The PyPI publish action also adds PEP 740 attestations.
 #
 # One-time setup at https://pypi.org/manage/account/publishing/ :
 #   project unicode-smuggling-guard, owner raulkivi, repository
 #   unicode-smuggling-guard, workflow publish.yml, environment pypi.
+#
+# Run manually with a tag to sign and attach files for an existing release.
 
 name: Publish to PyPI
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (vX.Y.Z) to sign and attach PyPI files for
+        required: true
 
 permissions:
   contents: read
 
 jobs:
-  publish:
+  build:
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -29,4 +34,46 @@ jobs:
         with:
           enable-cache: false  # a poisoned cache must not reach a published release
       - run: uv build
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+
+  sign:
+    needs: publish
+    # Runs after a release publish, or alone on manual dispatch (publish skipped).
+    if: ${{ !failure() && !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Fetch the files PyPI serves
+        run: python3 .github/scripts/fetch_pypi_release.py
+      - uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9 # v3.5.0
+        with:
+          inputs: ./dist/*.whl ./dist/*.tar.gz
+          release-signing-artifacts: false
+      - name: Attach files and signatures to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"

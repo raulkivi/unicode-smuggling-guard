@@ -134,9 +134,13 @@ classDiagram
 ## Development
 
 ```sh
-python -m pip install pytest
-python -m pytest
+python -m pip install --require-hashes -r requirements-dev.txt
+python -m pytest                               # unit + property tests
+HYPOTHESIS_PROFILE=fuzz python -m pytest tests/test_properties.py   # long fuzzing run
 ```
+
+`requirements-dev.txt` is generated with hashes from `requirements-dev.in`:
+`uv pip compile --universal --python-version 3.9 --generate-hashes requirements-dev.in -o requirements-dev.txt`.
 
 Related: [md2p](https://github.com/raulkivi/md2p), a Markdown terminal renderer that highlights the same hidden characters inline.
 
