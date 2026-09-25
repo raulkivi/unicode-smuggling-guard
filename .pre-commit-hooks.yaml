@@ -1,0 +1,6 @@
+- id: unicode-smuggling-guard
+  name: unicode smuggling guard
+  description: Detect invisible Unicode used to smuggle instructions into code, docs and AI agent files.
+  entry: unicode-smuggling-guard
+  language: python
+  types: [text]

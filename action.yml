@@ -1,0 +1,43 @@
+name: Unicode Smuggling Guard
+description: Fail pull requests that hide invisible Unicode (ASCII smuggling, Trojan Source, zero-width) in code, docs and AI agent instructions.
+author: Raul Kivi
+branding:
+  icon: eye-off
+  color: red
+
+inputs:
+  paths:
+    description: Files or directories to scan, separated by spaces or newlines. Directories honour .gitignore.
+    required: false
+    default: .
+  ignore:
+    description: Categories to skip, separated by spaces or newlines. One of tag, variation-selector, bidi, zero-width, control, invisible.
+    required: false
+    default: ''
+  fail-on-findings:
+    description: Fail the step when hidden characters are found. Set to false to only annotate.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Scan for hidden Unicode
+      shell: bash
+      # Inputs reach the script only through env, never through ${{ }} in the
+      # script body, so a crafted input cannot inject shell commands.
+      env:
+        USG_PATHS: ${{ inputs.paths }}
+        USG_IGNORE: ${{ inputs.ignore }}
+        USG_FAIL: ${{ inputs.fail-on-findings }}
+        PYTHONPATH: ${{ github.action_path }}/src
+      run: |
+        set -euo pipefail
+        set -f  # paths are split on whitespace but never glob-expanded
+        py="$(command -v python3 || command -v python)"
+        args=(--format github --summary "$GITHUB_STEP_SUMMARY")
+        for category in $USG_IGNORE; do args+=(--ignore "$category"); done
+        status=0
+        "$py" -m unicode_smuggling_guard "${args[@]}" -- $USG_PATHS || status=$?
+        if [ "$status" -eq 1 ] && [ "$USG_FAIL" != "true" ]; then exit 0; fi
+        exit "$status"
