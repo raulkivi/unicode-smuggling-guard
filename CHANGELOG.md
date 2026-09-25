@@ -7,7 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- Python 3.14 support.
 - Release assets (wheel and sdist) are attached to each GitHub release with Sigstore signatures (`*.sigstore.json`).
+
+### Removed
+- Python 3.9 support; it reached end of life in October 2025.
 
 ## [1.0.1] - 2026-09-25
 

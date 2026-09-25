@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  fuzz:
+  hypothesis:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -22,3 +22,17 @@ jobs:
       - run: python -m pytest -q tests/test_properties.py
         env:
           HYPOTHESIS_PROFILE: fuzz
+
+  atheris:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --require-hashes -r requirements-fuzz.txt
+      - run: python fuzz/fuzz_scan.py -max_total_time=600
+        env:
+          PYTHONPATH: src
