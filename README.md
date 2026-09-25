@@ -19,7 +19,7 @@ auth.py:2:47: bidi: 1 hidden character U+2066 LEFT-TO-RIGHT ISOLATE
 unicode-smuggling-guard: 6 hidden runs in 3 of 4 files
 ```
 
-Zero dependencies, Python 3.9+.
+Zero dependencies, Python 3.10+.
 
 ## Quick start
 
@@ -136,11 +136,20 @@ classDiagram
 ```sh
 python -m pip install --require-hashes -r requirements-dev.txt
 python -m pytest                               # unit + property tests
-HYPOTHESIS_PROFILE=fuzz python -m pytest tests/test_properties.py   # long fuzzing run
+HYPOTHESIS_PROFILE=fuzz python -m pytest tests/test_properties.py   # long property run
 ```
 
+Coverage-guided fuzzing with [Atheris](https://github.com/google/atheris) (Python 3.12+, Linux/macOS):
+
+```sh
+python -m pip install --require-hashes -r requirements-fuzz.txt
+PYTHONPATH=src python fuzz/fuzz_scan.py -max_total_time=300
+```
+
+Both run weekly in `fuzz.yml`.
+
 `requirements-dev.txt` is generated with hashes from `requirements-dev.in`:
-`uv pip compile --universal --python-version 3.9 --generate-hashes requirements-dev.in -o requirements-dev.txt`.
+`uv pip compile --universal --python-version 3.10 --generate-hashes requirements-dev.in -o requirements-dev.txt`.
 
 Related: [md2p](https://github.com/raulkivi/md2p), a Markdown terminal renderer that highlights the same hidden characters inline.
 
