@@ -22,7 +22,7 @@ class Finding:
 _FLAG_TAG_SEQUENCE = re.compile('\U0001F3F4([\U000E0030-\U000E0039\U000E0061-\U000E007A]{1,6}\U000E007F)')
 
 # Only these can appear in pure-ASCII text; lets clean ASCII files skip the per-character walk.
-_ASCII_SUSPICIOUS = re.compile('[\x00-\x08\x0b\x0e-\x1f\x7f]')
+_ASCII_SUSPICIOUS = frozenset(ch for ch in map(chr, range(0x80)) if classify(ch) is not None)
 
 _JOINERS = frozenset('\u200c\u200d')
 # The only ASCII characters with standardised variation sequences (keycap emoji).
@@ -97,6 +97,6 @@ def _runs(text: str) -> Iterator[Finding]:
 
 def scan(text: str) -> list[Finding]:
     """Return every run of hidden characters in *text*, in order."""
-    if text.isascii() and not _ASCII_SUSPICIOUS.search(text):
+    if text.isascii() and _ASCII_SUSPICIOUS.isdisjoint(text):
         return []
     return list(_runs(text))
