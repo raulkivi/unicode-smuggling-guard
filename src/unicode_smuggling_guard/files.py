@@ -2,9 +2,11 @@
 
 import os
 import subprocess
+import sys
 from collections.abc import Iterable, Iterator
 
 MAX_BYTES = 10 * 1024 * 1024
+STDIN = '-'
 
 
 def _is_regular_file(path: str) -> bool:
@@ -37,7 +39,9 @@ def _walk(directory: str) -> Iterator[str]:
 def iter_files(paths: Iterable[str]) -> Iterator[str]:
     """Expand directories (honouring .gitignore when inside git) into file paths."""
     for path in paths:
-        if os.path.isdir(path):
+        if path == STDIN:
+            yield path
+        elif os.path.isdir(path):
             listed = _git_files(path)
             found = listed if listed is not None else _walk(path)
             yield from (os.path.normpath(p) for p in found)
@@ -45,12 +49,19 @@ def iter_files(paths: Iterable[str]) -> Iterator[str]:
             yield os.path.normpath(path)
 
 
-def read_text(path: str, max_bytes: int = MAX_BYTES) -> str | None:
-    """File contents as text, or None for binary or oversized files."""
+def _read_bytes(path: str, max_bytes: int) -> bytes | None:
+    if path == STDIN:
+        data = sys.stdin.buffer.read(max_bytes + 1)
+        return data if len(data) <= max_bytes else None
     if os.path.getsize(path) > max_bytes:
         return None
     with open(path, 'rb') as fh:
-        data = fh.read()
-    if b'\0' in data:
+        return fh.read()
+
+
+def read_text(path: str, max_bytes: int = MAX_BYTES) -> str | None:
+    """File (or stdin for '-') contents as text, or None for binary or oversized input."""
+    data = _read_bytes(path, max_bytes)
+    if data is None or b'\0' in data:
         return None
     return data.decode('utf-8', errors='replace')

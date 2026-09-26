@@ -9,6 +9,7 @@ from unicode_smuggling_guard.categories import Category, classify
 from unicode_smuggling_guard.decode import decode
 from unicode_smuggling_guard.report import describe, format_github, format_text, summary_markdown
 from unicode_smuggling_guard.scanner import scan
+from unicode_smuggling_guard.tokens import scan_control_tokens
 
 ASCII_PREFIX = st.text(alphabet=string.ascii_letters + string.digits + ' .,', max_size=40)
 # Tag characters mirror ASCII only, so tag payloads are drawn from U+0000-007F.
@@ -87,3 +88,18 @@ def test_summary_row_count_matches_findings(payload):
 def test_describe_never_raises(text):
     for finding in scan(text):
         assert describe(finding).startswith(finding.category.value + ':')
+
+
+@given(st.text())
+def test_control_tokens_point_at_the_text_they_report(text):
+    for finding in scan_control_tokens(text):
+        token = ''.join(map(chr, finding.codepoints))
+        line = text.split('\n')[finding.line - 1]
+        assert line[finding.column - 1:finding.column - 1 + len(token)] == token
+
+
+@given(st.text(), st.text())
+def test_control_token_output_is_single_line_and_printable(prefix, name):
+    for finding in scan_control_tokens(prefix + '<\uff5c' + name + '\uff5c>'):
+        assert all(c.isprintable() for c in format_text('a.md', finding))
+        assert '\n' not in format_github('a.md', finding)

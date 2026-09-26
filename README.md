@@ -48,6 +48,7 @@ Findings appear as error annotations on the pull request diff and as a table in 
 |---|---|---|
 | `paths` | `.` | Files or directories, separated by spaces or newlines. Directories honour `.gitignore`. |
 | `ignore` | | Categories to skip, e.g. `bidi` for right-to-left documentation. |
+| `preset` | | `agent-files` scans only [agent files](#agent-files-and-mcp-tool-descriptions). |
 | `fail-on-findings` | `true` | `false` annotates without failing the step. |
 
 Needs `python3` on the runner. GitHub-hosted runners already have it.
@@ -63,6 +64,8 @@ repos:
       - id: unicode-smuggling-guard
 ```
 
+Use `id: unicode-smuggling-guard-agent-files` to check only agent files.
+
 ### Command line
 
 ```sh
@@ -74,9 +77,44 @@ unicode-smuggling-guard path/to/repo     # short alias: usguard
 |---|---|
 | `--format text\|github` | Compiler-style lines (default) or GitHub workflow annotations. |
 | `--ignore CATEGORY` | Skip a category; repeatable. |
+| `--preset agent-files` | Scan only [agent files](#agent-files-and-mcp-tool-descriptions). |
 | `--summary FILE` | Append a Markdown table, e.g. to `$GITHUB_STEP_SUMMARY`. |
+| `-` (as a path) | Read standard input, e.g. MCP tool descriptions. |
 
-Exit status: `0` clean, `1` hidden characters found, `2` usage error.
+Exit status: `0` clean, `1` hidden characters or control tokens found, `2` usage error.
+
+## Agent files and MCP tool descriptions
+
+AI coding agents load these files as trusted instructions. `--preset agent-files` limits a scan to them:
+
+| Agent or format | Files |
+|---|---|
+| Any (AGENTS.md standard) | `AGENTS.md`, `AGENT.md` |
+| Claude Code | `CLAUDE.md`, `CLAUDE.local.md`, `SKILL.md`, everything under `.claude/` |
+| Cursor | `.cursorrules`, `*.mdc`, everything under `.cursor/` |
+| GitHub Copilot | `copilot-instructions.md`, `*.instructions.md`, `*.prompt.md`, `*.chatmode.md`, `*.agent.md`, `.github/{instructions,prompts,agents,chatmodes}/` |
+| Gemini CLI | `GEMINI.md`, `.gemini/` |
+| Windsurf, Cline, Kiro, Junie, Amazon Q, Roo | `.windsurfrules`, `.clinerules`, `.windsurf/`, `.kiro/`, `.junie/`, `.amazonq/`, `.roo/` |
+| MCP configuration | `mcp.json`, `.mcp.json`, `claude_desktop_config.json` |
+
+Without the preset, all text files are scanned and agent files get one extra check: [chat-template control tokens](#what-it-detects).
+
+```yaml
+# Only agent files, e.g. in a repo whose test fixtures contain bidi text on purpose
+      - uses: raulkivi/unicode-smuggling-guard@v1
+        with:
+          preset: agent-files
+```
+
+An MCP server's tool descriptions reach the model without being shown to the user. Scan what a server actually returns before you install or update it:
+
+```sh
+npx @modelcontextprotocol/inspector --cli node build/index.js --method tools/list \
+  | jq -r '.. | objects | .description // empty' \
+  | unicode-smuggling-guard -
+```
+
+`jq` recursion includes the parameter descriptions in `inputSchema`, where payloads also hide. Standard input counts as agent content, so control tokens are checked too.
 
 ## What it detects
 
@@ -88,6 +126,7 @@ Exit status: `0` clean, `1` hidden characters found, `2` usage error.
 | `zero-width` | U+200B–200D, U+2060, U+FEFF, U+180E | Splits keywords to dodge filters and review; hides watermarks. |
 | `control` | C0/C1 controls except tab, LF, CR, form feed | Terminal escape injection, invisible bytes. |
 | `invisible` | Other format characters (e.g. soft hyphen, invisible operators), Hangul fillers, line/paragraph separators | Blank-rendering characters used to pad or disguise text. |
+| `control-token` | Chat-template tokens: `<\|im_start\|>`, `<\|start_header_id\|>`, `<start_of_turn>`, `[INST]`, `<<SYS>>`, DeepSeek `<｜User｜>`. Agent files and stdin only. | Turn forgery: when a serving stack renders the template without escaping content, the token opens a new system or user turn. Visible, but reviewers do not recognise it. |
 
 ### Legitimate uses it allows
 
@@ -95,6 +134,7 @@ Exit status: `0` clean, `1` hidden characters found, `2` usage error.
 - Zero-width joiners inside emoji sequences and non-Latin words: family emoji, Persian and Indic text.
 - Subdivision flag tag sequences: England, Scotland, Wales.
 - A byte-order mark at the very start of a file.
+- Chat-template tokens outside agent files: code that formats prompts for local models uses them on purpose.
 
 Anything else in these categories is reported. A run of selectors after an emoji is the signature of byte smuggling and is always reported.
 
@@ -110,7 +150,8 @@ Decoded payloads are attacker-controlled. The scanner escapes them for each outp
 
 - Skipped: binary files (any NUL byte), files over 10 MB, symlinks, UTF-16 text.
 - Invalid UTF-8 is read with replacement characters; the valid parts are still scanned.
-- Out of scope: visible homoglyphs (Cyrillic `а` for Latin `a`) and plain-text prompt injection.
+- Escape sequences are not decoded: `\u200b` written as six ASCII characters in JSON or source code is not reported.
+- Out of scope: visible homoglyphs (Cyrillic `а` for Latin `a`) and plain-text prompt injection other than chat-template tokens.
 
 ## Design
 
@@ -119,18 +160,23 @@ classDiagram
     direction LR
     class cli { main(argv) int }
     class files { iter_files(paths) read_text(path) }
+    class agent_files { is_agent_file(path) bool }
     class scanner { scan(text) List~Finding~ }
+    class tokens { scan_control_tokens(text) List~Finding~ }
     class categories { classify(ch) Category }
     class decode { decode(category, codepoints) str }
     class report { format_text() format_github() summary_markdown() }
     cli --> files
+    cli --> agent_files
     cli --> scanner
+    cli --> tokens
     cli --> report
     scanner --> categories
+    tokens --> scanner
     report --> decode
 ```
 
-`categories` knows which code points are hidden. `scanner` groups them into runs and applies the legitimate-use rules. `decode` recovers smuggled text. `report` owns every output format and its escaping.
+`categories` knows which code points are hidden. `scanner` groups them into runs and applies the legitimate-use rules. `tokens` finds chat-template control tokens. `agent_files` decides which paths agents load as instructions. `decode` recovers smuggled text. `report` owns every output format and its escaping.
 
 ## Development
 

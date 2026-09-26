@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `--preset agent-files` (Action input `preset`, pre-commit hook `unicode-smuggling-guard-agent-files`) scans only agent instruction, skill and MCP config files: `SKILL.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.claude/`, `.cursor/`, `.cursorrules`, Copilot instruction and prompt files, `mcp.json` and others.
+- `control-token` category: chat-template tokens such as `<|im_start|>`, `<start_of_turn>` and `[INST]` that forge conversation turns. Reported in agent files and standard input only.
+- `-` as a path reads standard input, e.g. MCP tool descriptions piped from `tools/list`.
+
 ## [1.1.0] - 2026-09-26
 
 ### Added

@@ -11,7 +11,11 @@ inputs:
     required: false
     default: .
   ignore:
-    description: Categories to skip, separated by spaces or newlines. One of tag, variation-selector, bidi, zero-width, control, invisible.
+    description: Categories to skip, separated by spaces or newlines. One of tag, variation-selector, bidi, zero-width, control, invisible, control-token.
+    required: false
+    default: ''
+  preset:
+    description: Set to agent-files to scan only agent instruction, skill and MCP config files (SKILL.md, AGENTS.md, .claude/, .cursor/rules, mcp.json).
     required: false
     default: ''
   fail-on-findings:
@@ -29,6 +33,7 @@ runs:
       env:
         USG_PATHS: ${{ inputs.paths }}
         USG_IGNORE: ${{ inputs.ignore }}
+        USG_PRESET: ${{ inputs.preset }}
         USG_FAIL: ${{ inputs.fail-on-findings }}
         PYTHONPATH: ${{ github.action_path }}/src
       run: |
@@ -37,6 +42,7 @@ runs:
         py="$(command -v python3 || command -v python)"
         args=(--format github --summary "$GITHUB_STEP_SUMMARY")
         for category in $USG_IGNORE; do args+=(--ignore "$category"); done
+        if [ -n "$USG_PRESET" ]; then args+=(--preset "$USG_PRESET"); fi
         status=0
         "$py" -m unicode_smuggling_guard "${args[@]}" -- $USG_PATHS || status=$?
         if [ "$status" -eq 1 ] && [ "$USG_FAIL" != "true" ]; then exit 0; fi

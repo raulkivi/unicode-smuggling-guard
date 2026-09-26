@@ -4,3 +4,9 @@
   entry: unicode-smuggling-guard
   language: python
   types: [text]
+- id: unicode-smuggling-guard-agent-files
+  name: unicode smuggling guard (agent files)
+  description: Scan only agent instruction, skill and MCP config files for hidden Unicode and forged chat-template turns.
+  entry: unicode-smuggling-guard --preset agent-files
+  language: python
+  types: [text]

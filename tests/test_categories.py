@@ -46,5 +46,5 @@ def test_other_invisible_characters(cp):
 
 def test_category_slugs_are_stable_cli_names():
     assert [c.value for c in Category] == [
-        'tag', 'variation-selector', 'bidi', 'zero-width', 'control', 'invisible',
+        'tag', 'variation-selector', 'bidi', 'zero-width', 'control', 'invisible', 'control-token',
     ]

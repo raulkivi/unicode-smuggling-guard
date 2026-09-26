@@ -78,3 +78,20 @@ def test_summary_neutralises_markdown_in_payload():
 
 def test_empty_summary_reports_clean_scan():
     assert summary_markdown([]) == '### Hidden Unicode: none found\n'
+
+
+IM_START = Finding(2, 5, Category.CONTROL_TOKEN, tuple(map(ord, '<|im_start|>')))
+
+
+def test_control_token_is_quoted():
+    assert describe(IM_START) == 'control-token: chat-template token "<|im_start|>"'
+
+
+def test_control_token_annotation_has_its_own_title():
+    assert format_github('SKILL.md', IM_START).startswith(
+        '::error file=SKILL.md,line=2,col=5,title=Chat-template token (control-token)::'
+    )
+
+
+def test_control_token_is_escaped_in_summary():
+    assert '\\<\\|im\\_start\\|\\>' in summary_markdown([('SKILL.md', IM_START)])
