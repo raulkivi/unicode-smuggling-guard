@@ -5,7 +5,8 @@ import unicodedata
 
 
 class Category(enum.Enum):
-    """Kinds of invisible character, ordered by how directly they carry a payload."""
+    """Kinds of finding: invisible characters, ordered by how directly they carry a
+    payload, then visible chat-template tokens that forge conversation turns."""
 
     TAG = 'tag'
     VARIATION_SELECTOR = 'variation-selector'
@@ -13,6 +14,7 @@ class Category(enum.Enum):
     ZERO_WIDTH = 'zero-width'
     CONTROL = 'control'
     INVISIBLE = 'invisible'
+    CONTROL_TOKEN = 'control-token'  # noqa: S105 - a category name, not a credential
 
 
 TAG_RANGE = (0xE0000, 0xE007F)

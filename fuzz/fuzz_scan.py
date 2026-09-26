@@ -13,11 +13,12 @@ import atheris
 with atheris.instrument_imports():
     from unicode_smuggling_guard.report import format_github, format_text, summary_markdown
     from unicode_smuggling_guard.scanner import scan
+    from unicode_smuggling_guard.tokens import scan_control_tokens
 
 
 def test_one_input(data: bytes) -> None:
     text = atheris.FuzzedDataProvider(data).ConsumeUnicodeNoSurrogates(len(data))
-    results = [('fuzz.md', finding) for finding in scan(text)]
+    results = [('fuzz.md', finding) for finding in scan(text) + scan_control_tokens(text)]
     for path, finding in results:
         annotation = format_github(path, finding)
         if '\n' in annotation or '\r' in annotation:

@@ -9,6 +9,7 @@ import re
 import unicodedata
 from collections.abc import Sequence
 
+from .categories import Category
 from .decode import decode
 from .scanner import Finding
 
@@ -29,6 +30,8 @@ def _printable(text: str) -> str:
 def describe(finding: Finding) -> str:
     """One-line explanation: category, what was found, and any decoded payload."""
     cps = finding.codepoints
+    if finding.category is Category.CONTROL_TOKEN:
+        return f'{finding.category.value}: chat-template token "{_printable("".join(map(chr, cps)))}"'
     if len(cps) == 1:
         name = unicodedata.name(chr(cps[0]), '')
         found = f'1 hidden character {_codepoint(cps[0])}' + (f' {name}' if name else '')
@@ -51,13 +54,17 @@ def _escape_command_property(text: str) -> str:
     return _escape_command_data(text).replace(':', '%3A').replace(',', '%2C')
 
 
+def _title(category: Category) -> str:
+    return 'Chat-template token' if category is Category.CONTROL_TOKEN else 'Hidden Unicode'
+
+
 def format_github(path: str, finding: Finding) -> str:
     """A workflow ::error command, so the finding shows inline on the PR diff."""
     props = ','.join([
         f'file={_escape_command_property(path)}',
         f'line={finding.line}',
         f'col={finding.column}',
-        f'title={_escape_command_property(f"Hidden Unicode ({finding.category.value})")}',
+        f'title={_escape_command_property(f"{_title(finding.category)} ({finding.category.value})")}',
     ])
     return f'::error {props}::{_escape_command_data(describe(finding))}'
 

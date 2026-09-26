@@ -1,5 +1,6 @@
 """Finding the text files to scan and reading them safely."""
 
+import io
 import os
 import shutil
 import subprocess
@@ -62,3 +63,17 @@ def test_invalid_utf8_is_read_with_replacement(tmp_path):
 def test_oversized_file_is_skipped(tmp_path):
     f = _write(tmp_path / 'big.txt', b'a' * 11)
     assert read_text(str(f), max_bytes=10) is None
+
+
+def test_dash_is_yielded_as_standard_input():
+    assert list(iter_files(['-'])) == ['-']
+
+
+def test_dash_reads_standard_input(monkeypatch):
+    monkeypatch.setattr('sys.stdin', io.TextIOWrapper(io.BytesIO('tool \u200b'.encode())))
+    assert read_text('-') == 'tool \u200b'
+
+
+def test_oversized_standard_input_is_skipped(monkeypatch):
+    monkeypatch.setattr('sys.stdin', io.TextIOWrapper(io.BytesIO(b'a' * 11)))
+    assert read_text('-', max_bytes=10) is None
