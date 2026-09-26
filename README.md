@@ -210,6 +210,7 @@ Versions follow [Semantic Versioning](https://semver.org/). The `v1` tag tracks 
 - Releases may detect more: new characters, categories or agent-file paths. A repository that scanned clean can fail after an update. To choose when that happens, pin a release (`@v1.2.0`) or a commit SHA, and let Dependabot propose updates.
 
 Breaking changes go to `v2`, with migration notes in the [changelog](CHANGELOG.md).
+After `v2.0.0`, `v1` gets security fixes for 6 months from a `release/v1` branch.
 
 ## Design
 
