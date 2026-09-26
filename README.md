@@ -153,6 +153,65 @@ Decoded payloads are attacker-controlled. The scanner escapes them for each outp
 - Escape sequences are not decoded: `\u200b` written as six ASCII characters in JSON or source code is not reported.
 - Out of scope: visible homoglyphs (Cyrillic `а` for Latin `a`) and plain-text prompt injection other than chat-template tokens.
 
+## Compared with agent-skill and MCP scanners
+
+[NVIDIA SkillSpector](https://github.com/nvidia/skillspector), [Cisco skill-scanner](https://github.com/cisco-ai-defense/skill-scanner) and [Snyk agent-scan](https://github.com/snyk/agent-scan) audit what a skill or MCP server does: static rules, YARA signatures, code analysis and optional LLM or cloud judgement. unicode-smuggling-guard does one narrow job: it finds text that a reviewer cannot see or does not recognise.
+
+| | unicode-smuggling-guard | Skill and MCP scanners |
+|---|---|---|
+| Finds | Hidden Unicode with decoded payloads; chat-template tokens | Malicious code, exfiltration, prompt injection, vulnerable dependencies and more |
+| Method | Fixed character rules: same input, same result | Rules plus optional LLM or cloud analysis |
+| Scope | Every text file in the repository, or standard input | Skill packages and MCP servers |
+| Dependencies | None beyond Python | Python packages; API keys or an account for the LLM and cloud engines |
+| Network | Never | Optional in SkillSpector and skill-scanner; Snyk agent-scan sends component data to Snyk's API |
+
+Use unicode-smuggling-guard as the gate on every commit and pull request. Add a skill or MCP scanner when you install third-party skills or servers, or when you want a judgement on plain-language instructions.
+
+## FAQ
+
+### How do I detect hidden Unicode in pull requests?
+
+Add the [GitHub Action](#github-action) to a `pull_request` workflow. Each hidden run appears as an error annotation on the diff line, and the check fails. Make it a required status check to block the merge.
+
+### Doesn't GitHub already warn about hidden characters?
+
+GitHub shows a banner on files with hidden or bidirectional Unicode. The banner blocks nothing, does not say what the characters decode to, and does not cover text outside the repository, such as MCP tool descriptions.
+
+### How do I scan `SKILL.md`, `AGENTS.md` or `CLAUDE.md` for prompt injection?
+
+Run `unicode-smuggling-guard --preset agent-files .` or set `preset: agent-files` in the Action. It reports instructions hidden in invisible characters and forged chat-template turns. Instructions written in plain, visible language need a reviewer or a [skill scanner](#compared-with-agent-skill-and-mcp-scanners).
+
+### How do I check MCP tool descriptions for hidden instructions?
+
+Pipe the server's `tools/list` output into `unicode-smuggling-guard -`; see [Agent files and MCP tool descriptions](#agent-files-and-mcp-tool-descriptions). Check again after each server update: a server can change its descriptions after you approved it.
+
+### What is ASCII smuggling?
+
+Each character in the Unicode Tags block (U+E0000–E007F) mirrors one ASCII character but renders as nothing. A sentence written in tags stays invisible in editors, diffs and chat windows, while LLM tokenizers still read it. The scanner reports the run and decodes it back to ASCII.
+
+### How do I block Trojan Source (CVE-2021-42574) attacks?
+
+The `bidi` category reports the directional overrides and isolates that make code display differently from how it compiles. It is on by default. Repositories with right-to-left documentation can scan code and docs in separate steps and pass `ignore: bidi` for the docs.
+
+### Will it flag emoji, Persian or Hindi text?
+
+No. Emoji variation selectors, emoji ZWJ sequences, ZWNJ/ZWJ in non-Latin scripts, subdivision flags and a leading BOM are [allowed](#legitimate-uses-it-allows).
+
+### Does it send my code anywhere?
+
+No. It reads files locally, has no runtime dependencies and makes no network calls.
+
+## Versioning
+
+Versions follow [Semantic Versioning](https://semver.org/). The `v1` tag tracks the latest 1.x release. Within `v1`:
+
+- Action inputs, CLI options, pre-commit hook ids and exit codes (`0`, `1`, `2`) stay backward compatible.
+- Text output keeps the `path:line:column: category:` prefix, and `--format github` keeps emitting `::error` annotations.
+- Releases may detect more: new characters, categories or agent-file paths. A repository that scanned clean can fail after an update. To choose when that happens, pin a release (`@v1.2.0`) or a commit SHA, and let Dependabot propose updates.
+
+Breaking changes go to `v2`, with migration notes in the [changelog](CHANGELOG.md).
+After `v2.0.0`, `v1` gets security fixes for 6 months from a `release/v1` branch.
+
 ## Design
 
 ```mermaid
