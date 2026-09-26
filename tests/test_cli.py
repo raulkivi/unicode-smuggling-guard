@@ -98,10 +98,11 @@ def test_control_tokens_can_be_ignored(tmp_path):
     assert main(['--ignore', 'control-token', str(f)]) == 0
 
 
-def test_findings_are_reported_in_file_order(tmp_path, capsys):
-    f = tmp_path / 'CLAUDE.md'
-    f.write_text('a\u200bb <|eot_id|> c\u200bd\n', encoding='utf-8')
-    main([str(f)])
+def test_findings_are_reported_in_file_order(tmp_path, capsys, monkeypatch):
+    # Relative path: an absolute Windows path has a drive colon that would shift the split.
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / 'CLAUDE.md').write_text('a\u200bb <|eot_id|> c\u200bd\n', encoding='utf-8')
+    main(['CLAUDE.md'])
     columns = [line.split(':')[2] for line in capsys.readouterr().out.splitlines()]
     assert columns == ['2', '5', '17']
 
