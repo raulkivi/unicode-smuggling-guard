@@ -1,0 +1,47 @@
+name: Bug report or false positive
+description: Wrong output, a false positive, or a crash
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write the input as `\uXXXX` escapes, not literal characters. Invisible characters get lost or altered in copy-paste.
+        A way to make the scanner miss hidden text is a security issue: report it privately instead.
+  - type: dropdown
+    id: usage
+    attributes:
+      label: How do you run it?
+      options:
+        - GitHub Action
+        - pre-commit hook
+        - CLI
+        - Python API
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release, Action ref, or commit.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS and Python version
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Input
+      description: The file content or command, with non-ASCII characters as escapes.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual output
+    validations:
+      required: true

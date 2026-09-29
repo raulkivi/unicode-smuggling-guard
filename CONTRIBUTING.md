@@ -1,5 +1,7 @@
 # Contributing
 
+By participating you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Reporting
 
 - Bugs, false positives, missed characters and feature requests: [open an issue](https://github.com/raulkivi/unicode-smuggling-guard/issues). Include the input as `\uXXXX` escapes, not literal characters; invisible characters get lost or altered in copy-paste.
