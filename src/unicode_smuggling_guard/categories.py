@@ -21,7 +21,8 @@ TAG_RANGE = (0xE0000, 0xE007F)
 
 # VS1-16 and the VS17-256 supplement. Category Mn, so str.isprintable() is True
 # even though they render with zero width; one byte of payload fits in each.
-VARIATION_SELECTOR_RANGES = ((0xFE00, 0xFE0F), (0xE0100, 0xE01EF))
+# Mongolian free variation selectors FVS1-4 (U+180B-180D, U+180F) carry the same payload.
+VARIATION_SELECTOR_RANGES = ((0xFE00, 0xFE0F), (0xE0100, 0xE01EF), (0x180B, 0x180D), (0x180F, 0x180F))
 
 # Embeddings, overrides, isolates and marks: reorder how code displays
 # without changing what compilers or LLMs read (Trojan Source, CVE-2021-42574).
@@ -34,8 +35,10 @@ _ZERO_WIDTH = frozenset([0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF, 0x180E])
 # Characters that render blank but are not in category Cf, so need listing:
 # combining grapheme joiner, Hangul fillers, Khmer inherent vowels, line and
 # paragraph separators, braille blank and the object replacement character.
+# U+2065 and U+FFF0-FFF8 are unassigned default-ignorables (category Cn).
 _INVISIBLE_EXTRA = frozenset([
-    0x034F, 0x115F, 0x1160, 0x17B4, 0x17B5, 0x2028, 0x2029, 0x2800, 0x3164, 0xFFA0, 0xFFFC,
+    0x034F, 0x115F, 0x1160, 0x17B4, 0x17B5, 0x2028, 0x2029, 0x2065, 0x2800, 0x3164, 0xFFA0, 0xFFFC,
+    *range(0xFFF0, 0xFFF9),
 ])
 
 _ALLOWED_CONTROLS = frozenset('\t\n\r\f')

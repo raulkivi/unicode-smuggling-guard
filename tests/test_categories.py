@@ -17,7 +17,7 @@ def test_tags_block(cp):
     assert classify(chr(cp)) is Category.TAG
 
 
-@pytest.mark.parametrize('cp', [0xFE00, 0xFE0F, 0xE0100, 0xE01EF])
+@pytest.mark.parametrize('cp', [0xFE00, 0xFE0F, 0xE0100, 0xE01EF, 0x180B, 0x180C, 0x180D, 0x180F])
 def test_variation_selectors(cp):
     assert classify(chr(cp)) is Category.VARIATION_SELECTOR
 
@@ -51,3 +51,8 @@ def test_category_slugs_are_stable_cli_names():
     assert [c.value for c in Category] == [
         'tag', 'variation-selector', 'bidi', 'zero-width', 'control', 'invisible', 'control-token',
     ]
+
+
+@pytest.mark.parametrize('cp', [0x2065, 0xFFF0, 0xFFF8])
+def test_unassigned_default_ignorables_are_invisible(cp):
+    assert classify(chr(cp)) is Category.INVISIBLE
