@@ -9,6 +9,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Community health files: `CODE_OF_CONDUCT.md`, issue forms and a pull request template.
 
+### Changed
+- The `invisible` category also reports U+17B4 and U+17B5 (Khmer inherent vowels), U+2800 (braille pattern blank) and U+FFFC (object replacement character), which render blank.
+
+### Security
+- The Action runs Python in isolated mode and imports the scanner only from its own directory. Before, a pull request could add a `unicode_smuggling_guard/` package to the repository root and replace the scanner with code that reports nothing.
+
+### Fixed
+- Tag sequences after a black flag are allowed only for the England, Scotland and Wales flags (`gbeng`, `gbsct`, `gbwls`). Before, any 1-6 lowercase tag letters or digits were allowed, so text could hide in a row of flags six characters at a time.
+- Files that cannot be scanned no longer pass silently. UTF-16 and UTF-32 files with a byte order mark are decoded and scanned. Any other skipped file (NUL byte, over 10 MB) is reported as a warning on stderr, a `::warning` annotation and a "Not scanned" table in the job summary. An unscanned agent file, standard input or file named on the command line is an error and exits `1`.
+- Variation selectors are allowed only in the sequences they exist for: U+FE0E/U+FE0F after an emoji or keycap base, U+E0100–E01EF after a CJK unified ideograph. Before, any of the 256 selectors was allowed once after a digit, `#`, `*` or any non-ASCII character, so a payload could hide one byte per character (e.g. `0`+selector+`1`+selector, or after Cyrillic letters).
+- The Action's `fail-on-findings` input is case-insensitive, and values other than `true` or `false` fail the step instead of silently disabling failure.
+
 ## [1.2.0] - 2026-09-26
 
 ### Added

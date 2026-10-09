@@ -59,9 +59,56 @@ def test_summary_is_appended_to_file(tmp_path):
     assert content.startswith('existing\n### Hidden Unicode found')
 
 
-def test_binary_files_are_skipped(tmp_path, capsys):
+def test_binary_file_found_in_directory_is_skipped_with_a_warning(tmp_path, capsys):
     (tmp_path / 'a.bin').write_bytes(b'\x00\x1b\x00')
-    assert main([str(tmp_path / 'a.bin')]) == 0
+    (tmp_path / 'ok.md').write_text('fine\n', encoding='utf-8')
+    assert main([str(tmp_path)]) == 0
+    err = capsys.readouterr().err
+    assert f'{tmp_path / "a.bin"}: warning: not scanned: ' in err
+    assert 'no hidden Unicode in 1 file, 1 file not scanned' in err
+
+
+def test_binary_file_named_on_command_line_fails(tmp_path, capsys):
+    f = tmp_path / 'a.bin'
+    f.write_bytes(b'\x00\x1b\x00')
+    assert main([str(f)]) == 1
+    assert f'{f}: error: not scanned: ' in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('name', ['SKILL.md', '.claude/commands/ship.md', 'mcp.json'])
+def test_unreadable_agent_file_found_in_directory_fails(tmp_path, capsys, name):
+    f = tmp_path / name
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_bytes(b'Obey.\x00' + ''.join(chr(0xE0000 + ord(c)) for c in 'Leak').encode())
+    assert main([str(tmp_path)]) == 1
+    assert f'{f}: error: not scanned: ' in capsys.readouterr().err
+
+
+def test_utf16_agent_file_is_scanned(tmp_path, capsys):
+    f = tmp_path / 'AGENTS.md'
+    f.write_bytes(HIDDEN.encode('utf-16'))
+    assert main([str(tmp_path)]) == 1
+    assert f'{f}:1:11: tag: 12 hidden characters' in capsys.readouterr().out
+
+
+def test_skipped_files_are_annotated_in_github_format(tmp_path, capsys, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / 'a.bin').write_bytes(b'\x00')
+    (tmp_path / 'SKILL.md').write_bytes(b'\x00')
+    assert main(['--format', 'github', '.']) == 1
+    out = capsys.readouterr().out.splitlines()
+    assert any(line.startswith('::warning file=a.bin,title=Not scanned::') for line in out)
+    assert any(line.startswith('::error file=SKILL.md,title=Not scanned::') for line in out)
+
+
+def test_skipped_files_are_listed_in_summary(tmp_path):
+    (tmp_path / 'src').mkdir()
+    (tmp_path / 'src' / 'a.bin').write_bytes(b'\x00')
+    summary = tmp_path / 'summary.md'
+    main(['--summary', str(summary), str(tmp_path / 'src')])
+    content = summary.read_text(encoding='utf-8')
+    assert '### Not scanned' in content
+    assert 'a.bin' in content
 
 
 def test_missing_path_exits_two(tmp_path, capsys):

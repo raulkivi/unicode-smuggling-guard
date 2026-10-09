@@ -1,4 +1,4 @@
-"""Renders findings as terminal lines, GitHub annotations and job summaries.
+"""Renders findings and unscanned files as terminal lines, GitHub annotations and job summaries.
 
 Decoded payloads are attacker-controlled, so every output escapes them for
 its medium: control characters for terminals, workflow-command separators for
@@ -8,6 +8,7 @@ GitHub, and Markdown syntax for job summaries.
 import re
 import unicodedata
 from collections.abc import Sequence
+from typing import NamedTuple
 
 from .categories import Category
 from .decode import decode
@@ -69,6 +70,28 @@ def format_github(path: str, finding: Finding) -> str:
     return f'::error {props}::{_escape_command_data(describe(finding))}'
 
 
+class NotScanned(NamedTuple):
+    """A file that could not be read as text. Fatal when its contents must be checked."""
+
+    path: str
+    reason: str
+    fatal: bool
+
+
+def _level(skipped: NotScanned) -> str:
+    return 'error' if skipped.fatal else 'warning'
+
+
+def format_not_scanned_text(skipped: NotScanned) -> str:
+    return f'{skipped.path}: {_level(skipped)}: not scanned: {skipped.reason}'
+
+
+def format_not_scanned_github(skipped: NotScanned) -> str:
+    """A workflow ::warning (or ::error when fatal), so an unscanned file cannot pass unnoticed."""
+    props = f'file={_escape_command_property(skipped.path)},title=Not scanned'
+    return f'::{_level(skipped)} {props}::{_escape_command_data(f"{skipped.path}: {skipped.reason}")}'
+
+
 _MARKDOWN_SYNTAX = re.compile(r'([\\`*_\[\]()!<>|~#&])')
 
 
@@ -76,8 +99,7 @@ def _escape_markdown(text: str) -> str:
     return _MARKDOWN_SYNTAX.sub(r'\\\1', text)
 
 
-def summary_markdown(results: Sequence[tuple[str, Finding]]) -> str:
-    """Markdown table for $GITHUB_STEP_SUMMARY."""
+def _findings_markdown(results: Sequence[tuple[str, Finding]]) -> str:
     if not results:
         return '### Hidden Unicode: none found\n'
     rows = [
@@ -86,3 +108,16 @@ def summary_markdown(results: Sequence[tuple[str, Finding]]) -> str:
     ]
     header = ['### Hidden Unicode found', '', '| File | Line:Col | Category | Detail |', '|---|---|---|---|']
     return '\n'.join(header + rows) + '\n'
+
+
+def _not_scanned_markdown(skipped: Sequence[NotScanned]) -> str:
+    if not skipped:
+        return ''
+    rows = [f'| {_escape_markdown(s.path)} | {_level(s)} | {_escape_markdown(s.reason)} |' for s in skipped]
+    header = ['', '### Not scanned', '', '| File | Level | Reason |', '|---|---|---|']
+    return '\n'.join(header + rows) + '\n'
+
+
+def summary_markdown(results: Sequence[tuple[str, Finding]], skipped: Sequence[NotScanned] = ()) -> str:
+    """Markdown tables for $GITHUB_STEP_SUMMARY: findings, then files that could not be scanned."""
+    return _findings_markdown(results) + _not_scanned_markdown(skipped)

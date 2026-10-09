@@ -49,7 +49,7 @@ Findings appear as error annotations on the pull request diff and as a table in 
 | `paths` | `.` | Files or directories, separated by spaces or newlines. Directories honour `.gitignore`. |
 | `ignore` | | Categories to skip, e.g. `bidi` for right-to-left documentation. |
 | `preset` | | `agent-files` scans only [agent files](#agent-files-and-mcp-tool-descriptions). |
-| `fail-on-findings` | `true` | `false` annotates without failing the step. |
+| `fail-on-findings` | `true` | `false` annotates without failing the step. Case-insensitive; any other value fails the step. |
 
 Needs `python3` on the runner. GitHub-hosted runners already have it.
 
@@ -81,7 +81,7 @@ unicode-smuggling-guard path/to/repo     # short alias: usguard
 | `--summary FILE` | Append a Markdown table, e.g. to `$GITHUB_STEP_SUMMARY`. |
 | `-` (as a path) | Read standard input, e.g. MCP tool descriptions. |
 
-Exit status: `0` clean, `1` hidden characters or control tokens found, `2` usage error.
+Exit status: `0` clean, `1` hidden characters or control tokens found, or a file that must be scanned could not be read (see [Limits](#limits)), `2` usage error.
 
 ## Agent files and MCP tool descriptions
 
@@ -125,14 +125,15 @@ npx @modelcontextprotocol/inspector --cli node build/index.js --method tools/lis
 | `bidi` | U+202A–202E, U+2066–2069, U+200E, U+200F, U+061C | Trojan Source ([CVE-2021-42574](https://trojansource.codes/)): code displays differently from how it compiles. |
 | `zero-width` | U+200B–200D, U+2060, U+FEFF, U+180E | Splits keywords to dodge filters and review; hides watermarks. |
 | `control` | C0/C1 controls except tab, LF, CR, form feed | Terminal escape injection, invisible bytes. |
-| `invisible` | Other format characters (e.g. soft hyphen, invisible operators), Hangul fillers, line/paragraph separators | Blank-rendering characters used to pad or disguise text. |
+| `invisible` | Other format characters (e.g. soft hyphen, invisible operators), Hangul fillers, Khmer inherent vowels U+17B4–17B5, line/paragraph separators, braille blank U+2800, object replacement character U+FFFC | Blank-rendering characters used to pad or disguise text. |
 | `control-token` | Chat-template tokens: `<\|im_start\|>`, `<\|start_header_id\|>`, `<start_of_turn>`, `[INST]`, `<<SYS>>`, DeepSeek `<｜User｜>`. Agent files and stdin only. | Turn forgery: when a serving stack renders the template without escaping content, the token opens a new system or user turn. Visible, but reviewers do not recognise it. |
 
 ### Legitimate uses it allows
 
-- A single variation selector after an emoji, CJK ideograph or keycap base: `❤️`, `1️⃣`, ideographic variants.
+- A single presentation selector (U+FE0E, U+FE0F) after an emoji or keycap base (`#`, `*`, `0`–`9`): `❤️`, `1️⃣`, `☺︎`.
+- A single ideographic variation selector (U+E0100–E01EF) after a CJK unified ideograph: `葛󠄀`.
 - Zero-width joiners inside emoji sequences and non-Latin words: family emoji, Persian and Indic text.
-- Subdivision flag tag sequences: England, Scotland, Wales.
+- Subdivision flag tag sequences for England, Scotland and Wales (tags `gbeng`, `gbsct`, `gbwls`), the only ones emoji fonts render. Other tags after a black flag are reported.
 - A byte-order mark at the very start of a file.
 - Chat-template tokens outside agent files: code that formats prompts for local models uses them on purpose.
 
@@ -148,9 +149,11 @@ Decoded payloads are attacker-controlled. The scanner escapes them for each outp
 
 ### Limits
 
-- Skipped: binary files (any NUL byte), files over 10 MB, symlinks, UTF-16 text.
+- Text is read as UTF-8, or as UTF-16 or UTF-32 when the file starts with a byte order mark.
+- Not scanned: files with a NUL byte (binary, or UTF-16/32 without a byte order mark), files over 10 MB, symlinks. Each unscanned file is reported: a warning on stderr, a `::warning` annotation and a row in the job summary. An unscanned agent file, standard input, or a file named on the command line is an error and exits `1`, so a payload cannot hide behind an unreadable encoding. Binary files found by walking a directory only warn.
 - Invalid UTF-8 is read with replacement characters; the valid parts are still scanned.
 - Escape sequences are not decoded: `\u200b` written as six ASCII characters in JSON or source code is not reported.
+- One ideographic variation selector per CJK ideograph is allowed, because the Ideographic Variation Database registers selectors across the whole range; in CJK text each ideograph can still carry one hidden byte.
 - Out of scope: visible homoglyphs (Cyrillic `а` for Latin `a`) and plain-text prompt injection other than chat-template tokens.
 
 ## Compared with agent-skill and MCP scanners

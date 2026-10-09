@@ -1,9 +1,11 @@
 """Chooses which files to scan and reads them as text."""
 
+import codecs
 import os
 import subprocess
 import sys
 from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
 
 MAX_BYTES = 10 * 1024 * 1024
 STDIN = '-'
@@ -59,9 +61,40 @@ def _read_bytes(path: str, max_bytes: int) -> bytes | None:
         return fh.read()
 
 
-def read_text(path: str, max_bytes: int = MAX_BYTES) -> str | None:
-    """File (or stdin for '-') contents as text, or None for binary or oversized input."""
+@dataclass(frozen=True)
+class Skipped:
+    """Input that could not be read as text, so its contents went unchecked."""
+
+    reason: str
+
+
+# UTF-32 first: its little-endian mark begins with UTF-16's.
+_BOMS = (
+    (codecs.BOM_UTF32_LE, 'utf-32-le'), (codecs.BOM_UTF32_BE, 'utf-32-be'),
+    (codecs.BOM_UTF16_LE, 'utf-16-le'), (codecs.BOM_UTF16_BE, 'utf-16-be'),
+)
+
+
+def _wide_encoding(data: bytes) -> tuple[str, int] | None:
+    for bom, encoding in _BOMS:
+        if data.startswith(bom):
+            return encoding, len(bom)
+    return None
+
+
+def read_text(path: str, max_bytes: int = MAX_BYTES) -> str | Skipped:
+    """File (or stdin for '-') contents as text, or why it cannot be read as text.
+
+    UTF-8 is the default; UTF-16 and UTF-32 are recognised by their byte order mark.
+    Anything else with a NUL byte is treated as binary.
+    """
     data = _read_bytes(path, max_bytes)
-    if data is None or b'\0' in data:
-        return None
+    if data is None:
+        return Skipped(f'larger than {max_bytes:,} bytes')
+    wide = _wide_encoding(data)
+    if wide is not None:
+        encoding, bom_length = wide
+        return data[bom_length:].decode(encoding, errors='replace')
+    if b'\0' in data:
+        return Skipped('contains NUL bytes (binary, or UTF-16/32 without a byte order mark)')
     return data.decode('utf-8', errors='replace')

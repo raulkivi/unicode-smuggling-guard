@@ -1,7 +1,15 @@
 """Rendering findings for terminals, GitHub annotations and job summaries."""
 
 from unicode_smuggling_guard.categories import Category
-from unicode_smuggling_guard.report import describe, format_github, format_text, summary_markdown
+from unicode_smuggling_guard.report import (
+    NotScanned,
+    describe,
+    format_github,
+    format_not_scanned_github,
+    format_not_scanned_text,
+    format_text,
+    summary_markdown,
+)
 from unicode_smuggling_guard.scanner import Finding
 
 
@@ -95,3 +103,35 @@ def test_control_token_annotation_has_its_own_title():
 
 def test_control_token_is_escaped_in_summary():
     assert '\\<\\|im\\_start\\|\\>' in summary_markdown([('SKILL.md', IM_START)])
+
+
+BINARY = NotScanned('a.bin', 'contains NUL bytes', fatal=False)
+AGENT = NotScanned('SKILL.md', 'contains NUL bytes', fatal=True)
+
+
+def test_not_scanned_text_is_a_warning_or_an_error():
+    assert format_not_scanned_text(BINARY) == 'a.bin: warning: not scanned: contains NUL bytes'
+    assert format_not_scanned_text(AGENT) == 'SKILL.md: error: not scanned: contains NUL bytes'
+
+
+def test_not_scanned_github_annotation_level_follows_fatality():
+    assert format_not_scanned_github(BINARY) == '::warning file=a.bin,title=Not scanned::a.bin: contains NUL bytes'
+    assert format_not_scanned_github(AGENT).startswith('::error file=SKILL.md,title=Not scanned::')
+
+
+def test_not_scanned_github_annotation_escapes_path():
+    line = format_not_scanned_github(NotScanned('a,b:\n::error::x', 'r', fatal=False))
+    assert '\n' not in line
+    assert line.startswith('::warning file=a%2Cb%3A%0A%3A%3Aerror%3A%3Ax,')
+
+
+def test_summary_lists_files_not_scanned():
+    summary = summary_markdown([], [BINARY, AGENT])
+    assert summary.startswith('### Hidden Unicode: none found\n')
+    assert '### Not scanned' in summary
+    assert '| a.bin | warning | contains NUL bytes |' in summary
+    assert '| SKILL.md | error | contains NUL bytes |' in summary
+
+
+def test_summary_escapes_markdown_in_skipped_path():
+    assert '| \\[x\\]\\(y\\) |' in summary_markdown([], [NotScanned('[x](y)', 'r', fatal=False)])
