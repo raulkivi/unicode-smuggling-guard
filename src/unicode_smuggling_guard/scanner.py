@@ -18,9 +18,15 @@ class Finding:
     codepoints: tuple[int, ...]
 
 
-# Subdivision flags (England, Scotland, Wales): BLACK FLAG + 1-6 lowercase or
-# digit tags + CANCEL TAG. Any other tag sequence has no rendering purpose.
-_FLAG_TAG_SEQUENCE = re.compile('\U0001F3F4([\U000E0030-\U000E0039\U000E0061-\U000E007A]{1,6}\U000E007F)')
+# The only recommended (RGI) emoji tag sequences: the England, Scotland and Wales
+# flags, BLACK FLAG + region tags + CANCEL TAG. Any other tag run, even one shaped
+# like a subdivision code, renders as a plain black flag and carries hidden text.
+_RGI_FLAG_REGIONS = ('gbeng', 'gbsct', 'gbwls')
+_FLAG_TAG_SEQUENCE = re.compile(
+    '\U0001F3F4((?:'
+    + '|'.join(''.join(chr(0xE0000 + ord(c)) for c in region) for region in _RGI_FLAG_REGIONS)
+    + ')\U000E007F)'
+)
 
 # Only these can appear in pure-ASCII text; lets clean ASCII files skip the per-character walk.
 _ASCII_SUSPICIOUS = frozenset(ch for ch in map(chr, range(0x80)) if classify(ch) is not None)

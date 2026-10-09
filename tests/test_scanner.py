@@ -184,6 +184,23 @@ def test_subdivision_flag_emoji_is_allowed():
     assert scan(f'Go {scotland}!') == []
 
 
+@pytest.mark.parametrize('region', ['gbeng', 'gbsct', 'gbwls'])
+def test_each_recommended_subdivision_flag_is_allowed(region):
+    assert scan('\U0001F3F4' + _tags(region) + '\U000E007F') == []
+
+
+@pytest.mark.parametrize('payload', ['ignore', 'rmrf', 'usca', 'gbsc', 'gbengx', 'GBSCT'])
+def test_other_tags_between_flag_and_cancel_tag_are_flagged(payload):
+    [finding] = scan('\U0001F3F4' + _tags(payload) + '\U000E007F')
+    assert finding.category is Category.TAG
+    assert finding.column == 2
+
+
+def test_words_hidden_in_a_row_of_flags_are_flagged():
+    flags = ''.join('\U0001F3F4' + _tags(word) + '\U000E007F' for word in ['ignore', 'all', 'rules'])
+    assert len(scan(flags)) == 3
+
+
 def test_tags_after_flag_without_cancel_tag_are_flagged():
     assert scan('\U0001F3F4' + _tags('gbsct'))[0].category is Category.TAG
 

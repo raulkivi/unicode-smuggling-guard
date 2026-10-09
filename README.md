@@ -133,7 +133,7 @@ npx @modelcontextprotocol/inspector --cli node build/index.js --method tools/lis
 - A single presentation selector (U+FE0E, U+FE0F) after an emoji or keycap base (`#`, `*`, `0`–`9`): `❤️`, `1️⃣`, `☺︎`.
 - A single ideographic variation selector (U+E0100–E01EF) after a CJK unified ideograph: `葛󠄀`.
 - Zero-width joiners inside emoji sequences and non-Latin words: family emoji, Persian and Indic text.
-- Subdivision flag tag sequences: England, Scotland, Wales.
+- Subdivision flag tag sequences for England, Scotland and Wales (tags `gbeng`, `gbsct`, `gbwls`), the only ones emoji fonts render. Other tags after a black flag are reported.
 - A byte-order mark at the very start of a file.
 - Chat-template tokens outside agent files: code that formats prompts for local models uses them on purpose.
 
