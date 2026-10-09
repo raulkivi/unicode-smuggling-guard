@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Community health files: `CODE_OF_CONDUCT.md`, issue forms and a pull request template.
 
+### Security
+- The Action runs Python in isolated mode and imports the scanner only from its own directory. Before, a pull request could add a `unicode_smuggling_guard/` package to the repository root and replace the scanner with code that reports nothing.
+
+### Fixed
+- The Action's `fail-on-findings` input is case-insensitive, and values other than `true` or `false` fail the step instead of silently disabling failure.
+
 ## [1.2.0] - 2026-09-26
 
 ### Added

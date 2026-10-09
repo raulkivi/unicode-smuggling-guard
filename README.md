@@ -49,7 +49,7 @@ Findings appear as error annotations on the pull request diff and as a table in 
 | `paths` | `.` | Files or directories, separated by spaces or newlines. Directories honour `.gitignore`. |
 | `ignore` | | Categories to skip, e.g. `bidi` for right-to-left documentation. |
 | `preset` | | `agent-files` scans only [agent files](#agent-files-and-mcp-tool-descriptions). |
-| `fail-on-findings` | `true` | `false` annotates without failing the step. |
+| `fail-on-findings` | `true` | `false` annotates without failing the step. Case-insensitive; any other value fails the step. |
 
 Needs `python3` on the runner. GitHub-hosted runners already have it.
 
