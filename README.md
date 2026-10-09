@@ -81,7 +81,7 @@ unicode-smuggling-guard path/to/repo     # short alias: usguard
 | `--summary FILE` | Append a Markdown table, e.g. to `$GITHUB_STEP_SUMMARY`. |
 | `-` (as a path) | Read standard input, e.g. MCP tool descriptions. |
 
-Exit status: `0` clean, `1` hidden characters or control tokens found, `2` usage error.
+Exit status: `0` clean, `1` hidden characters or control tokens found, or a file that must be scanned could not be read (see [Limits](#limits)), `2` usage error.
 
 ## Agent files and MCP tool descriptions
 
@@ -149,7 +149,8 @@ Decoded payloads are attacker-controlled. The scanner escapes them for each outp
 
 ### Limits
 
-- Skipped: binary files (any NUL byte), files over 10 MB, symlinks, UTF-16 text.
+- Text is read as UTF-8, or as UTF-16 or UTF-32 when the file starts with a byte order mark.
+- Not scanned: files with a NUL byte (binary, or UTF-16/32 without a byte order mark), files over 10 MB, symlinks. Each unscanned file is reported: a warning on stderr, a `::warning` annotation and a row in the job summary. An unscanned agent file, standard input, or a file named on the command line is an error and exits `1`, so a payload cannot hide behind an unreadable encoding. Binary files found by walking a directory only warn.
 - Invalid UTF-8 is read with replacement characters; the valid parts are still scanned.
 - Escape sequences are not decoded: `\u200b` written as six ASCII characters in JSON or source code is not reported.
 - One ideographic variation selector per CJK ideograph is allowed, because the Ideographic Variation Database registers selectors across the whole range; in CJK text each ideograph can still carry one hidden byte.

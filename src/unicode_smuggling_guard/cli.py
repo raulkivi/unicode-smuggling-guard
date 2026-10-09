@@ -8,8 +8,15 @@ from collections.abc import Sequence
 from . import __version__
 from .agent_files import is_agent_file
 from .categories import Category
-from .files import STDIN, iter_files, read_text
-from .report import format_github, format_text, summary_markdown
+from .files import STDIN, Skipped, iter_files, read_text
+from .report import (
+    NotScanned,
+    format_github,
+    format_not_scanned_github,
+    format_not_scanned_text,
+    format_text,
+    summary_markdown,
+)
 from .scanner import Finding, scan
 from .tokens import scan_control_tokens
 
@@ -18,6 +25,12 @@ PROG = 'unicode-smuggling-guard'
 EXIT_CLEAN, EXIT_FOUND, EXIT_USAGE = 0, 1, 2
 
 _FORMATTERS = {'text': format_text, 'github': format_github}
+
+# Unscanned files: GitHub annotations go to stdout with the findings, terminal warnings to stderr.
+_NOT_SCANNED_OUTPUT = {
+    'text': (format_not_scanned_text, lambda: sys.stderr),
+    'github': (format_not_scanned_github, lambda: sys.stdout),
+}
 
 # Each preset keeps only the files it selects.
 _PRESETS = {'agent-files': is_agent_file}
@@ -48,11 +61,21 @@ def _plural(n: int, word: str) -> str:
     return f'{n} {word}' + ('' if n == 1 else 's')
 
 
-def _tally(results: Sequence[tuple[str, Finding]], scanned: int) -> str:
+def _tally(results: Sequence[tuple[str, Finding]], scanned: int, skipped: int) -> str:
     if not results:
-        return f'{PROG}: no hidden Unicode in {_plural(scanned, "file")}'
-    dirty = len({path for path, _ in results})
-    return f'{PROG}: {_plural(len(results), "hidden run")} in {dirty} of {_plural(scanned, "file")}'
+        tally = f'{PROG}: no hidden Unicode in {_plural(scanned, "file")}'
+    else:
+        dirty = len({path for path, _ in results})
+        tally = f'{PROG}: {_plural(len(results), "hidden run")} in {dirty} of {_plural(scanned, "file")}'
+    return tally + (f', {_plural(skipped, "file")} not scanned' if skipped else '')
+
+
+def _must_be_scanned(path: str, explicit: frozenset[str]) -> bool:
+    """Files an attacker could hide behind an unreadable encoding: agent files and paths named by the user.
+
+    Binary files met while walking a directory are expected and only warned about.
+    """
+    return path in explicit or is_agent_file(path)
 
 
 def _findings(path: str, text: str) -> list[Finding]:
@@ -73,11 +96,17 @@ def main(argv: list[str] | None = None) -> int:
     ignored = {Category(value) for value in args.ignore}
     formatter = _FORMATTERS[args.format]
     selected = _PRESETS.get(args.preset, lambda _: True)
+    explicit = frozenset(os.path.normpath(p) if p != STDIN else p for p in args.paths if not os.path.isdir(p))
+    format_not_scanned, stream = _NOT_SCANNED_OUTPUT[args.format]
     results: list[tuple[str, Finding]] = []
+    not_scanned: list[NotScanned] = []
     scanned = 0
     for path in filter(selected, iter_files(args.paths)):
         text = read_text(path)
-        if text is None:
+        if isinstance(text, Skipped):
+            skipped = NotScanned(path, text.reason, fatal=_must_be_scanned(path, explicit))
+            not_scanned.append(skipped)
+            print(format_not_scanned(skipped), file=stream())
             continue
         scanned += 1
         for finding in _findings(path, text):
@@ -88,6 +117,6 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.summary:
         with open(args.summary, 'a', encoding='utf-8') as fh:
-            fh.write(summary_markdown(results))
-    print(_tally(results, scanned), file=sys.stderr)
-    return EXIT_FOUND if results else EXIT_CLEAN
+            fh.write(summary_markdown(results, not_scanned))
+    print(_tally(results, scanned, len(not_scanned)), file=sys.stderr)
+    return EXIT_FOUND if results or any(s.fatal for s in not_scanned) else EXIT_CLEAN

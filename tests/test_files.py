@@ -7,7 +7,7 @@ import subprocess
 
 import pytest
 
-from unicode_smuggling_guard.files import iter_files, read_text
+from unicode_smuggling_guard.files import Skipped, iter_files, read_text
 
 
 def _write(path, data):
@@ -46,13 +46,15 @@ def test_utf8_text_is_read(tmp_path):
 
 def test_binary_file_is_skipped(tmp_path):
     f = _write(tmp_path / 'a.png', b'\x89PNG\r\n\x1a\n\x00\x00')
-    assert read_text(str(f)) is None
+    skipped = read_text(str(f))
+    assert isinstance(skipped, Skipped)
+    assert 'NUL' in skipped.reason
 
 
 def test_binary_with_late_nul_byte_is_skipped(tmp_path):
     # PDFs often have a long text header before the first NUL byte.
     f = _write(tmp_path / 'a.pdf', b'%PDF-1.4\n' + b'a' * 20000 + b'\x00')
-    assert read_text(str(f)) is None
+    assert isinstance(read_text(str(f)), Skipped)
 
 
 def test_invalid_utf8_is_read_with_replacement(tmp_path):
@@ -62,7 +64,20 @@ def test_invalid_utf8_is_read_with_replacement(tmp_path):
 
 def test_oversized_file_is_skipped(tmp_path):
     f = _write(tmp_path / 'big.txt', b'a' * 11)
-    assert read_text(str(f), max_bytes=10) is None
+    skipped = read_text(str(f), max_bytes=10)
+    assert isinstance(skipped, Skipped)
+    assert 'larger than' in skipped.reason
+
+
+@pytest.mark.parametrize('encoding', ['utf-16-le', 'utf-16-be', 'utf-32-le', 'utf-32-be'])
+def test_utf16_and_utf32_with_byte_order_mark_are_read(tmp_path, encoding):
+    f = _write(tmp_path / 'SKILL.md', '\ufeffObey.\u200b\U000E0041'.encode(encoding))
+    assert read_text(str(f)) == 'Obey.\u200b\U000E0041'
+
+
+def test_utf16_without_byte_order_mark_is_skipped(tmp_path):
+    f = _write(tmp_path / 'a.md', 'hello'.encode('utf-16-le'))
+    assert isinstance(read_text(str(f)), Skipped)
 
 
 def test_dash_is_yielded_as_standard_input():
@@ -76,4 +91,4 @@ def test_dash_reads_standard_input(monkeypatch):
 
 def test_oversized_standard_input_is_skipped(monkeypatch):
     monkeypatch.setattr('sys.stdin', io.TextIOWrapper(io.BytesIO(b'a' * 11)))
-    assert read_text('-', max_bytes=10) is None
+    assert isinstance(read_text('-', max_bytes=10), Skipped)
