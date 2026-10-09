@@ -125,7 +125,7 @@ npx @modelcontextprotocol/inspector --cli node build/index.js --method tools/lis
 | `bidi` | U+202A–202E, U+2066–2069, U+200E, U+200F, U+061C | Trojan Source ([CVE-2021-42574](https://trojansource.codes/)): code displays differently from how it compiles. |
 | `zero-width` | U+200B–200D, U+2060, U+FEFF, U+180E | Splits keywords to dodge filters and review; hides watermarks. |
 | `control` | C0/C1 controls except tab, LF, CR, form feed | Terminal escape injection, invisible bytes. |
-| `invisible` | Other format characters (e.g. soft hyphen, invisible operators), Hangul fillers, line/paragraph separators | Blank-rendering characters used to pad or disguise text. |
+| `invisible` | Other format characters (e.g. soft hyphen, invisible operators), Hangul fillers, Khmer inherent vowels U+17B4–17B5, line/paragraph separators, braille blank U+2800, object replacement character U+FFFC | Blank-rendering characters used to pad or disguise text. |
 | `control-token` | Chat-template tokens: `<\|im_start\|>`, `<\|start_header_id\|>`, `<start_of_turn>`, `[INST]`, `<<SYS>>`, DeepSeek `<｜User｜>`. Agent files and stdin only. | Turn forgery: when a serving stack renders the template without escaping content, the token opens a new system or user turn. Visible, but reviewers do not recognise it. |
 
 ### Legitimate uses it allows

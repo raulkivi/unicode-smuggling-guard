@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Community health files: `CODE_OF_CONDUCT.md`, issue forms and a pull request template.
 
+### Changed
+- The `invisible` category also reports U+17B4 and U+17B5 (Khmer inherent vowels), U+2800 (braille pattern blank) and U+FFFC (object replacement character), which render blank.
+
 ### Security
 - The Action runs Python in isolated mode and imports the scanner only from its own directory. Before, a pull request could add a `unicode_smuggling_guard/` package to the repository root and replace the scanner with code that reports nothing.
 

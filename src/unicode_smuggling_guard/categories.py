@@ -31,8 +31,12 @@ _BIDI = frozenset(
 
 _ZERO_WIDTH = frozenset([0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF, 0x180E])
 
-# Characters that render blank but are not in category Cf, so need listing.
-_INVISIBLE_EXTRA = frozenset([0x034F, 0x115F, 0x1160, 0x2028, 0x2029, 0x3164, 0xFFA0])
+# Characters that render blank but are not in category Cf, so need listing:
+# combining grapheme joiner, Hangul fillers, Khmer inherent vowels, line and
+# paragraph separators, braille blank and the object replacement character.
+_INVISIBLE_EXTRA = frozenset([
+    0x034F, 0x115F, 0x1160, 0x17B4, 0x17B5, 0x2028, 0x2029, 0x2800, 0x3164, 0xFFA0, 0xFFFC,
+])
 
 _ALLOWED_CONTROLS = frozenset('\t\n\r\f')
 
