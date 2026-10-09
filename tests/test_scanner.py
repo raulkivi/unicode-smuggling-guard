@@ -101,6 +101,59 @@ def test_variation_selector_at_line_start_is_flagged():
     assert scan('a\n\ufe0f')[0].line == 2
 
 
+def _vs(byte):
+    return chr(0xFE00 + byte) if byte < 16 else chr(0xE0100 + byte - 16)
+
+
+@pytest.mark.parametrize('text', [
+    '\u2764\ufe0f',            # heart, emoji presentation
+    '\u263a\ufe0e',            # smiling face, text presentation
+    '\u00a9\ufe0f',            # copyright sign
+    '\u2122\ufe0f',            # trade mark sign
+    '\u2b50\ufe0f',            # star
+    '\U0001F600\ufe0f',        # grinning face
+    '\U0001F44D\ufe0e',        # thumbs up
+    '1\ufe0f\u20e3',           # keycap one
+    '*\ufe0e',                  # keycap asterisk, text presentation
+    '\u845b\U000E0100',        # ideographic variation sequence
+    '\u9089\U000E01EF',        # last ideographic variation selector
+    '\U00020000\U000E0101',    # CJK extension B ideograph
+])
+def test_standard_variation_sequences_are_allowed(text):
+    assert scan(f'x {text} y') == []
+
+
+@pytest.mark.parametrize('text', [
+    '0\ufe00',                  # keycap base with a selector other than VS15/VS16
+    '7\U000E0141',              # keycap base with an ideographic selector
+    '\u2764\ufe01',            # emoji base with a selector other than VS15/VS16
+    '\U0001F600\U000E0100',    # emoji base with an ideographic selector
+    '\u845b\ufe0f',            # ideograph with an emoji selector
+    '\u845b\ufe03',
+    '\u0430\ufe0f',            # Cyrillic letter
+    '\u0430\U000E0110',
+    '\xe9\ufe0f',              # Latin letter with diacritic
+    '\u3042\U000E0100',        # Hiragana is not an ideograph
+])
+def test_selector_without_a_matching_base_is_flagged(text):
+    [finding] = scan(text)
+    assert finding.category is Category.VARIATION_SELECTOR
+    assert finding.column == 2
+
+
+def test_one_byte_per_digit_is_flagged():
+    payload = b'Ignore the user'
+    hidden = ''.join(str(i % 10) + _vs(b) for i, b in enumerate(payload))
+    assert len(scan(hidden)) == len(payload)
+
+
+@pytest.mark.parametrize('base', ['\u0430', '\u20ac', '\u3042'])
+def test_one_byte_per_non_ascii_character_is_flagged(base):
+    payload = b'print secrets'
+    hidden = ''.join(base + _vs(b) for b in payload)
+    assert len(scan(hidden)) == len(payload)
+
+
 # --- Joiners -----------------------------------------------------------------
 
 def test_zwj_inside_emoji_sequence_is_allowed():

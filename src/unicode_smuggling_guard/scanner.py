@@ -1,6 +1,7 @@
 """Finds runs of hidden characters in text, skipping their legitimate uses."""
 
 import re
+import unicodedata
 from collections.abc import Iterator
 from dataclasses import dataclass
 
@@ -25,9 +26,23 @@ _FLAG_TAG_SEQUENCE = re.compile('\U0001F3F4([\U000E0030-\U000E0039\U000E0061-\U0
 _ASCII_SUSPICIOUS = frozenset(ch for ch in map(chr, range(0x80)) if classify(ch) is not None)
 
 _JOINERS = frozenset('\u200c\u200d')
+_BOM = '\ufeff'
+
+# VS15/VS16 choose text or emoji presentation; every other selector in
+# U+FE00-FE0D has no use in prose, code or emoji.
+_PRESENTATION_SELECTORS = frozenset('\ufe0e\ufe0f')
 # The only ASCII characters with standardised variation sequences (keycap emoji).
 _KEYCAP_BASES = frozenset('#*0123456789')
-_BOM = '\ufeff'
+# Code points that can take an emoji presentation selector: the bases in
+# emoji-variation-sequences.txt, widened to their blocks so new emoji need no update.
+_PICTOGRAPHIC_RANGES = (
+    (0x00A9, 0x00A9), (0x00AE, 0x00AE), (0x203C, 0x203C), (0x2049, 0x2049),
+    (0x2122, 0x2122), (0x2139, 0x2139), (0x2194, 0x21AA), (0x231A, 0x23FF),
+    (0x24C2, 0x24C2), (0x25AA, 0x25FE), (0x2600, 0x27BF), (0x2934, 0x2935),
+    (0x2B05, 0x2B55), (0x3030, 0x3030), (0x303D, 0x303D), (0x3297, 0x3297),
+    (0x3299, 0x3299), (0x1F000, 0x1FAFF),
+)
+_IDEOGRAPHIC_SELECTORS = (0xE0100, 0xE01EF)
 
 
 def _flag_tag_indices(text: str) -> frozenset[int]:
@@ -49,12 +64,26 @@ def _joins_non_ascii(text: str, i: int) -> bool:
     return before_ok and _is_visible_base(after) and not after.isascii()
 
 
+def _is_pictographic(ch: str) -> bool:
+    cp = ord(ch)
+    return any(lo <= cp <= hi for lo, hi in _PICTOGRAPHIC_RANGES)
+
+
+def _is_cjk_ideograph(ch: str) -> bool:
+    return unicodedata.name(ch, '').startswith('CJK UNIFIED IDEOGRAPH-')
+
+
+def _selector_fits_base(selector: str, base: str) -> bool:
+    """VS15/VS16 after an emoji or keycap base; VS17-256 after a CJK ideograph."""
+    if selector in _PRESENTATION_SELECTORS:
+        return base in _KEYCAP_BASES or _is_pictographic(base)
+    lo, hi = _IDEOGRAPHIC_SELECTORS
+    return lo <= ord(selector) <= hi and _is_cjk_ideograph(base)
+
+
 def _selects_single_variant(text: str, i: int) -> bool:
-    """One selector after an emoji, CJK or keycap base picks a glyph variant."""
-    if i == 0:
-        return False
-    base = text[i - 1]
-    if not _is_visible_base(base) or (base.isascii() and base not in _KEYCAP_BASES):
+    """One selector of the kind its base takes picks a glyph variant; any other carries a byte."""
+    if i == 0 or not _selector_fits_base(text[i], text[i - 1]):
         return False
     return i + 1 >= len(text) or not is_variation_selector(text[i + 1])
 

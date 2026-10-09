@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The Action runs Python in isolated mode and imports the scanner only from its own directory. Before, a pull request could add a `unicode_smuggling_guard/` package to the repository root and replace the scanner with code that reports nothing.
 
 ### Fixed
+- Variation selectors are allowed only in the sequences they exist for: U+FE0E/U+FE0F after an emoji or keycap base, U+E0100–E01EF after a CJK unified ideograph. Before, any of the 256 selectors was allowed once after a digit, `#`, `*` or any non-ASCII character, so a payload could hide one byte per character (e.g. `0`+selector+`1`+selector, or after Cyrillic letters).
 - The Action's `fail-on-findings` input is case-insensitive, and values other than `true` or `false` fail the step instead of silently disabling failure.
 
 ## [1.2.0] - 2026-09-26

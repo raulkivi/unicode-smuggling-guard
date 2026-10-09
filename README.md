@@ -130,7 +130,8 @@ npx @modelcontextprotocol/inspector --cli node build/index.js --method tools/lis
 
 ### Legitimate uses it allows
 
-- A single variation selector after an emoji, CJK ideograph or keycap base: `❤️`, `1️⃣`, ideographic variants.
+- A single presentation selector (U+FE0E, U+FE0F) after an emoji or keycap base (`#`, `*`, `0`–`9`): `❤️`, `1️⃣`, `☺︎`.
+- A single ideographic variation selector (U+E0100–E01EF) after a CJK unified ideograph: `葛󠄀`.
 - Zero-width joiners inside emoji sequences and non-Latin words: family emoji, Persian and Indic text.
 - Subdivision flag tag sequences: England, Scotland, Wales.
 - A byte-order mark at the very start of a file.
@@ -151,6 +152,7 @@ Decoded payloads are attacker-controlled. The scanner escapes them for each outp
 - Skipped: binary files (any NUL byte), files over 10 MB, symlinks, UTF-16 text.
 - Invalid UTF-8 is read with replacement characters; the valid parts are still scanned.
 - Escape sequences are not decoded: `\u200b` written as six ASCII characters in JSON or source code is not reported.
+- One ideographic variation selector per CJK ideograph is allowed, because the Ideographic Variation Database registers selectors across the whole range; in CJK text each ideograph can still carry one hidden byte.
 - Out of scope: visible homoglyphs (Cyrillic `а` for Latin `a`) and plain-text prompt injection other than chat-template tokens.
 
 ## Compared with agent-skill and MCP scanners
