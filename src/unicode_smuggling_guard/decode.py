@@ -13,14 +13,22 @@ def _decode_tags(codepoints: Sequence[int]) -> str:
     return ''.join(chr(cp - _TAG_BASE) for cp in codepoints if lo <= cp <= hi)
 
 
-def _variation_selector_byte(cp: int) -> int:
+def _variation_selector_byte(cp: int) -> int | None:
     # VS1-16 carry bytes 0-15, VS17-256 carry bytes 16-255.
-    return cp - 0xFE00 if cp <= 0xFE0F else cp - 0xE0100 + 16
+    # Mongolian free variation selectors (U+180B-180F) have no byte encoding.
+    if 0xFE00 <= cp <= 0xFE0F:
+        return cp - 0xFE00
+    if 0xE0100 <= cp <= 0xE01EF:
+        return cp - 0xE0100 + 16
+    return None
 
 
 def _decode_variation_selectors(codepoints: Sequence[int]) -> str | None:
+    data = [_variation_selector_byte(cp) for cp in codepoints]
+    if None in data:
+        return None
     try:
-        return bytes(_variation_selector_byte(cp) for cp in codepoints).decode('utf-8')
+        return bytes(data).decode('utf-8')
     except UnicodeDecodeError:
         return None
 

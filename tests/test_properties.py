@@ -14,6 +14,8 @@ from unicode_smuggling_guard.tokens import scan_control_tokens
 ASCII_PREFIX = st.text(alphabet=string.ascii_letters + string.digits + ' .,', max_size=40)
 # Tag characters mirror ASCII only, so tag payloads are drawn from U+0000-007F.
 ASCII_TEXT = st.text(alphabet=st.characters(max_codepoint=0x7F))
+# Random text almost never holds a run of selectors from different blocks.
+SELECTOR_RUNS = st.text(alphabet=[chr(cp) for cp in [0xFE00, 0xFE0F, 0xE0100, 0xE01EF, 0x180B, 0x180F]] + ['a'])
 
 
 def _tags(text):
@@ -84,7 +86,7 @@ def test_summary_row_count_matches_findings(payload):
     assert len(table_rows) == len(findings)
 
 
-@given(st.text())
+@given(st.text() | SELECTOR_RUNS)
 def test_describe_never_raises(text):
     for finding in scan(text):
         assert describe(finding).startswith(finding.category.value + ':')

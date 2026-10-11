@@ -44,3 +44,11 @@ def test_stray_selector_decoding_to_a_control_byte_returns_none():
 
 def test_empty_tag_payload_returns_none():
     assert decode(Category.TAG, (0xE007F,)) is None
+
+
+def test_mongolian_free_variation_selectors_carry_no_bytes():
+    assert decode(Category.VARIATION_SELECTOR, (0x180B, 0x180C, 0x180D, 0x180F)) is None
+
+
+def test_run_mixing_mongolian_and_byte_selectors_returns_none():
+    assert decode(Category.VARIATION_SELECTOR, _vs_bytes(b'hi') + (0x180B,)) is None
