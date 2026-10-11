@@ -59,7 +59,7 @@ Needs `python3` on the runner. GitHub-hosted runners already have it.
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/raulkivi/unicode-smuggling-guard
-    rev: v1.2.0
+    rev: v1.3.0
     hooks:
       - id: unicode-smuggling-guard
 ```
@@ -210,7 +210,7 @@ Versions follow [Semantic Versioning](https://semver.org/). The `v1` tag tracks 
 
 - Action inputs, CLI options, pre-commit hook ids and exit codes (`0`, `1`, `2`) stay backward compatible.
 - Text output keeps the `path:line:column: category:` prefix, and `--format github` keeps emitting `::error` annotations.
-- Releases may detect more: new characters, categories or agent-file paths. A repository that scanned clean can fail after an update. To choose when that happens, pin a release (`@v1.2.0`) or a commit SHA, and let Dependabot propose updates.
+- Releases may detect more: new characters, categories or agent-file paths. A repository that scanned clean can fail after an update. To choose when that happens, pin a release (`@v1.3.0`) or a commit SHA, and let Dependabot propose updates.
 
 Breaking changes go to `v2`, with migration notes in the [changelog](CHANGELOG.md).
 After `v2.0.0`, `v1` gets security fixes for 6 months from a `release/v1` branch.
