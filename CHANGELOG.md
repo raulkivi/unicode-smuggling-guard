@@ -1,5 +1,7 @@
 # Changelog
 
+Last changed: 2026-11-19 · Source: <https://github.com/raulkivi/unicode-smuggling-guard>
+
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
@@ -8,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - The PyPI classifier is now "Development Status :: 4 - Beta" instead of "5 - Production/Stable".
+
+### Fixed
+- Unassigned default-ignorable code points U+E0080–E00FF and U+E01F0–E0FFF, which render blank, are reported as `invisible`.
 
 ## [1.3.0] - 2026-10-12
 
