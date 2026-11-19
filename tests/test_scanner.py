@@ -215,3 +215,9 @@ def test_ascii_fast_path_matches_classify(cp):
     # Pure-ASCII text skips the per-character walk; it must still catch every ASCII control.
     expected = [Category.CONTROL] if classify(chr(cp)) is Category.CONTROL else []
     assert [f.category for f in scan(f'a{chr(cp)}b')] == expected
+
+
+def test_unassigned_tag_plane_default_ignorables_are_reported():
+    findings = scan('a\U000E0080\U000E01F0\U000E0FFF b')
+    assert findings
+    assert {f.category for f in findings} == {Category.INVISIBLE}
