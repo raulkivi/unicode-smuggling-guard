@@ -92,3 +92,15 @@ def test_dash_reads_standard_input(monkeypatch):
 def test_oversized_standard_input_is_skipped(monkeypatch):
     monkeypatch.setattr('sys.stdin', io.TextIOWrapper(io.BytesIO(b'a' * 11)))
     assert isinstance(read_text('-', max_bytes=10), Skipped)
+
+
+def test_vanished_file_is_skipped_not_raised(tmp_path):
+    result = read_text(str(tmp_path / 'gone.txt'))
+    assert isinstance(result, Skipped)
+    assert result.reason.startswith('cannot be read: ')
+
+
+def test_directory_is_skipped_not_raised(tmp_path):
+    result = read_text(str(tmp_path))
+    assert isinstance(result, Skipped)
+    assert result.reason.startswith('cannot be read: ')
