@@ -35,10 +35,13 @@ _ZERO_WIDTH = frozenset([0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF, 0x180E])
 # Characters that render blank but are not in category Cf, so need listing:
 # combining grapheme joiner, Hangul fillers, Khmer inherent vowels, line and
 # paragraph separators, braille blank and the object replacement character.
-# U+2065 and U+FFF0-FFF8 are unassigned default-ignorables (category Cn).
+# U+2065, U+FFF0-FFF8, U+E0080-E00FF and U+E01F0-E0FFF are unassigned
+# default-ignorables (category Cn): they render blank and can carry a byte.
 _INVISIBLE_EXTRA = frozenset([
     0x034F, 0x115F, 0x1160, 0x17B4, 0x17B5, 0x2028, 0x2029, 0x2065, 0x2800, 0x3164, 0xFFA0, 0xFFFC,
     *range(0xFFF0, 0xFFF9),
+    *range(0xE0080, 0xE0100),
+    *range(0xE01F0, 0xE1000),
 ])
 
 _ALLOWED_CONTROLS = frozenset('\t\n\r\f')

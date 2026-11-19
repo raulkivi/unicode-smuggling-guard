@@ -56,3 +56,18 @@ def test_category_slugs_are_stable_cli_names():
 @pytest.mark.parametrize('cp', [0x2065, 0xFFF0, 0xFFF8])
 def test_unassigned_default_ignorables_are_invisible(cp):
     assert classify(chr(cp)) is Category.INVISIBLE
+
+
+@pytest.mark.parametrize('cp', [0xE0080, 0xE00FF, 0xE01F0, 0xE0FFF])
+def test_unassigned_tag_plane_default_ignorables_are_invisible(cp):
+    assert classify(chr(cp)) is Category.INVISIBLE
+
+
+@pytest.mark.parametrize('cp', [0xE007F, 0xE0100, 0xE01EF])
+def test_assigned_tag_plane_code_points_keep_their_category(cp):
+    expected = Category.TAG if cp == 0xE007F else Category.VARIATION_SELECTOR
+    assert classify(chr(cp)) is expected
+
+
+def test_code_point_after_unassigned_tag_plane_range_is_ordinary():
+    assert classify(chr(0xE1000)) is None

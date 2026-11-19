@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The PyPI classifier is now "Development Status :: 4 - Beta" instead of "5 - Production/Stable".
 
 ### Fixed
+- Unassigned default-ignorable code points U+E0080–E00FF and U+E01F0–E0FFF, which render blank, are reported as `invisible`.
 - ZWJ and ZWNJ are allowed only where they shape rendering: ZWJ inside emoji ZWJ sequences, and either joiner between two characters of one cursive or conjunct-forming script (Arabic, Syriac, Thaana, N'Ko, Mongolian, the Indic scripts, Tibetan, Myanmar, Khmer). Before, a joiner was allowed between any two non-ASCII characters, so text could split keywords and hide about 1.58 bits per letter gap in accented Latin, Cyrillic, Greek or CJK text (e.g. `café`+ZWNJ+`é` or `при`+ZWJ+`вет`).
 
 ## [1.3.0] - 2026-10-12
