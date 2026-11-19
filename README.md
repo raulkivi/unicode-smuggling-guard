@@ -134,7 +134,8 @@ npx @modelcontextprotocol/inspector --cli node build/index.js --method tools/lis
 
 - A single presentation selector (U+FE0E, U+FE0F) after an emoji or keycap base (`#`, `*`, `0`–`9`): `❤️`, `1️⃣`, `☺︎`.
 - A single ideographic variation selector (U+E0100–E01EF) after a CJK unified ideograph: `葛󠄀`.
-- Zero-width joiners inside emoji sequences and non-Latin words: family emoji, Persian and Indic text.
+- ZWJ (U+200D) inside emoji ZWJ sequences: between two emoji, the first optionally followed by a skin-tone modifier, U+FE0F or the keycap mark U+20E3. Family, couple-with-heart, rainbow flag and profession emoji pass; ZWNJ between emoji is reported.
+- ZWJ and ZWNJ (U+200C) between two characters of the same script where joiners control cursive joining or conjunct and ligature forms: Arabic (with Persian and Urdu), Syriac, Thaana, N'Ko, Mongolian, Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam, Sinhala, Tibetan, Myanmar and Khmer. Joiners in Latin, Greek, Cyrillic, Hebrew, CJK, Hangul or between different scripts change nothing visible and are reported, as are joiners at the start or end of text and doubled joiners.
 - Subdivision flag tag sequences for England, Scotland and Wales (tags `gbeng`, `gbsct`, `gbwls`), the only ones emoji fonts render. Other tags after a black flag are reported.
 - A byte-order mark at the very start of a file.
 - Chat-template tokens outside agent files: code that formats prompts for local models uses them on purpose.
@@ -200,7 +201,7 @@ The `bidi` category reports the directional overrides and isolates that make cod
 
 ### Will it flag emoji, Persian or Hindi text?
 
-No. Emoji variation selectors, emoji ZWJ sequences, ZWNJ/ZWJ in non-Latin scripts, subdivision flags and a leading BOM are [allowed](#legitimate-uses-it-allows).
+No. Emoji variation selectors, emoji ZWJ sequences, subdivision flags and a leading BOM are [allowed](#legitimate-uses-it-allows). ZWNJ and ZWJ are allowed inside words of scripts that shape with them: Arabic and Persian, Syriac, Thaana, N'Ko, Mongolian, the Indic scripts from Devanagari to Sinhala, Tibetan, Myanmar and Khmer. A joiner between Latin, Greek, Cyrillic, Hebrew, CJK or Hangul letters is reported, because it renders nothing and can split keywords or hide bits.
 
 ### Does it send my code anywhere?
 

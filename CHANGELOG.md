@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Unexpected internal errors, such as an unwritable `--summary` path, print a traceback and exit `2`. Before, they exited `1`, so `fail-on-findings: false` turned a crashed scan into a passing step.
 - The Action checks for Python 3.10 or later and fails with exit `2` and an error annotation if it is missing or older. Before, Python 3.9 crashed on import with exit `1`, and a missing interpreter gave an unclear failure.
 - On Windows, findings with non-ASCII text (decoded payloads, DeepSeek tokens, file names) no longer crash the scan when output goes to a pipe, as in the Action and pre-commit; unencodable characters are printed as `\uXXXX` escapes.
+- ZWJ and ZWNJ are allowed only where they shape rendering: ZWJ inside emoji ZWJ sequences, and either joiner between two characters of one cursive or conjunct-forming script (Arabic, Syriac, Thaana, N'Ko, Mongolian, the Indic scripts, Tibetan, Myanmar, Khmer). Before, a joiner was allowed between any two non-ASCII characters, so text could split keywords and hide about 1.58 bits per letter gap in accented Latin, Cyrillic, Greek or CJK text (e.g. `café`+ZWNJ+`é` or `при`+ZWJ+`вет`).
 
 ### Security
 - Text output escapes control and format characters in file names. Before, a file named with terminal escape sequences or a newline could rewrite or forge terminal output.

@@ -177,6 +177,56 @@ def test_joiner_at_end_of_text_is_flagged():
     assert scan('\U0001F468\u200d')[0].category is Category.ZERO_WIDTH
 
 
+@pytest.mark.parametrize('text', [
+    '\U0001F468\u200d\U0001F469\u200d\U0001F467\u200d\U0001F466',  # family
+    '\U0001F469\u200d\u2764\ufe0f\u200d\U0001F468',  # couple with heart
+    '\U0001F3F3\ufe0f\u200d\U0001F308',  # rainbow flag
+    '\U0001F469\U0001F3FD\u200d\U0001F4BB',  # woman technologist, medium skin tone
+    '\U0001F3C3\u200d\u2640\ufe0f',  # woman running
+    '\U0001F3C3\u200d\u27a1\ufe0f',  # person running facing right
+])
+def test_rgi_emoji_zwj_sequences_are_allowed(text):
+    assert scan(text) == []
+
+
+@pytest.mark.parametrize('text', [
+    '\u092e\u0948\u0902\u0928\u0947 \u0915\u094d\u200d\u0937',  # Devanagari ZWJ: half form
+    '\u0915\u094d\u200c\u0937',  # Devanagari ZWNJ: explicit virama
+    '\u0dc1\u0dca\u200d\u0dbb\u0dd3',  # Sinhala ZWJ: rakaransaya
+    '\u0d28\u0d4d\u200d\u0d28',  # Malayalam ZWJ
+    '\u0644\u200d\u0627',  # Arabic ZWJ
+    '\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645',  # Persian ZWNJ
+    '\u0f40\u200d\u0f72',  # Tibetan
+    '\u1000\u103a\u200c\u1000',  # Myanmar
+    '\u1780\u17d2\u200c\u1780',  # Khmer
+    '\u1820\u200d\u1821',  # Mongolian
+    '\u0710\u200d\u0712',  # Syriac
+    '\u0780\u200c\u0781',  # Thaana
+    '\u07ca\u200d\u07cb',  # N'Ko
+])
+def test_joiners_in_cursive_and_conjunct_scripts_are_allowed(text):
+    assert scan(text) == []
+
+
+@pytest.mark.parametrize('text', [
+    'caf\xe9\u200c\xe9',  # Latin with accents
+    '\u043f\u0440\u0438\u200d\u0432\u0435\u0442',  # Cyrillic
+    '\u03b1\u200c\u03b2',  # Greek
+    '\u4e00\u200c\u4e8c',  # CJK
+    '\ud55c\u200d\uad6d',  # Hangul
+    '\u05e9\u200d\u05dc',  # Hebrew
+    '\u0915\u200d\u0430',  # Devanagari next to Cyrillic
+    '\u0645\u200c\u0915',  # Arabic next to Devanagari
+    '\u0915\u094d\u200d\u200d\u0937',  # doubled joiner
+    '\u200d\u0915',  # joiner at text start
+    '\U0001F468\u200c\U0001F469',  # ZWNJ between emoji
+    '\U0001F468\u200d\xe9',  # emoji joined to a letter
+    '\xe9\u200d\U0001F468',  # letter joined to an emoji
+])
+def test_joiners_without_a_rendering_purpose_are_flagged(text):
+    assert Category.ZERO_WIDTH in [f.category for f in scan(text)]
+
+
 # --- Tag sequences -----------------------------------------------------------
 
 def test_subdivision_flag_emoji_is_allowed():

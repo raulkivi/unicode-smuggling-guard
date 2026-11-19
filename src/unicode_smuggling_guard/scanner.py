@@ -32,7 +32,36 @@ _FLAG_TAG_SEQUENCE = re.compile(
 _ASCII_SUSPICIOUS = frozenset(ch for ch in map(chr, range(0x80)) if classify(ch) is not None)
 
 _JOINERS = frozenset('\u200c\u200d')
+_ZWJ = '\u200d'
 _BOM = '\ufeff'
+
+# Scripts where ZWJ/ZWNJ control cursive joining or conjunct and ligature
+# formation (Unicode Standard ch. 23.2 "Layout Controls"), as their block ranges
+# because the standard library has no Script property. In every other script a
+# joiner changes nothing visible, so it can only split keywords or carry bits.
+_JOINING_SCRIPTS = {
+    'Arabic': ((0x0600, 0x06FF), (0x0750, 0x077F), (0x0870, 0x08FF),
+               (0xFB50, 0xFDFF), (0xFE70, 0xFEFF), (0x10EC0, 0x10EFF)),
+    'Syriac': ((0x0700, 0x074F), (0x0860, 0x086F)),
+    'Thaana': ((0x0780, 0x07BF),),
+    'NKo': ((0x07C0, 0x07FF),),
+    'Devanagari': ((0x0900, 0x097F), (0xA8E0, 0xA8FF)),
+    'Bengali': ((0x0980, 0x09FF),),
+    'Gurmukhi': ((0x0A00, 0x0A7F),),
+    'Gujarati': ((0x0A80, 0x0AFF),),
+    'Oriya': ((0x0B00, 0x0B7F),),
+    'Tamil': ((0x0B80, 0x0BFF),),
+    'Telugu': ((0x0C00, 0x0C7F),),
+    'Kannada': ((0x0C80, 0x0CFF),),
+    'Malayalam': ((0x0D00, 0x0D7F),),
+    'Sinhala': ((0x0D80, 0x0DFF),),
+    'Tibetan': ((0x0F00, 0x0FFF),),
+    'Myanmar': ((0x1000, 0x109F), (0xA9E0, 0xA9FF), (0xAA60, 0xAA7F)),
+    'Khmer': ((0x1780, 0x17FF),),
+    'Mongolian': ((0x1800, 0x18AF), (0x11660, 0x1167F)),
+}
+# What may follow an emoji before its ZWJ: VS16 and the combining enclosing keycap.
+_EMOJI_ELEMENT_SUFFIXES = frozenset('\ufe0f\u20e3')
 
 # VS15/VS16 choose text or emoji presentation; every other selector in
 # U+FE00-FE0D has no use in prose, code or emoji.
@@ -57,17 +86,39 @@ def _flag_tag_indices(text: str) -> frozenset[int]:
     )
 
 
-def _is_visible_base(ch: str) -> bool:
-    return classify(ch) is None and not ch.isspace()
+def _joining_script(ch: str) -> str | None:
+    if classify(ch) is not None:
+        return None
+    cp = ord(ch)
+    for script, ranges in _JOINING_SCRIPTS.items():
+        if any(lo <= cp <= hi for lo, hi in ranges):
+            return script
+    return None
 
 
-def _joins_non_ascii(text: str, i: int) -> bool:
-    """ZWJ/ZWNJ inside emoji sequences and Arabic/Indic words shape rendering."""
+def _joins_script_letters(text: str, i: int) -> bool:
+    """ZWJ/ZWNJ between two characters of one cursive or conjunct-forming script."""
+    script = _joining_script(text[i - 1])
+    return script is not None and script == _joining_script(text[i + 1])
+
+
+def _ends_emoji_element(text: str, end: int) -> bool:
+    """An emoji, optionally followed by VS16 and/or a keycap mark, ends at *end*."""
+    base = end
+    while base > max(end - 2, 0) and text[base] in _EMOJI_ELEMENT_SUFFIXES:
+        base -= 1
+    return _is_pictographic(text[base])
+
+
+def _joins_emoji(text: str, i: int) -> bool:
+    """ZWJ between two elements of an emoji ZWJ sequence (family, couple, flags)."""
+    return text[i] == _ZWJ and _ends_emoji_element(text, i - 1) and _is_pictographic(text[i + 1])
+
+
+def _joiner_shapes_rendering(text: str, i: int) -> bool:
     if i == 0 or i + 1 >= len(text):
         return False
-    before, after = text[i - 1], text[i + 1]
-    before_ok = is_variation_selector(before) or (_is_visible_base(before) and not before.isascii())
-    return before_ok and _is_visible_base(after) and not after.isascii()
+    return _joins_emoji(text, i) or _joins_script_letters(text, i)
 
 
 def _is_pictographic(ch: str) -> bool:
@@ -104,7 +155,7 @@ def _suspicious(text: str, i: int, allowed_tags: frozenset[int]) -> Category | N
     if category is Category.ZERO_WIDTH:
         if ch == _BOM and i == 0:
             return None
-        if ch in _JOINERS and _joins_non_ascii(text, i):
+        if ch in _JOINERS and _joiner_shapes_rendering(text, i):
             return None
     return category
 
