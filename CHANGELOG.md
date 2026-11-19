@@ -13,7 +13,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - Unassigned default-ignorable code points U+E0080–E00FF and U+E01F0–E0FFF, which render blank, are reported as `invisible`.
+- A file that exists but cannot be read (permissions, removed mid-scan) is reported as not scanned. Before, the scanner crashed with a traceback and exit `1`, which looked like findings. The usual rules apply: an error for agent files, standard input and named paths, a warning for files found in a directory.
+- Unexpected internal errors, such as an unwritable `--summary` path, print a traceback and exit `2`. Before, they exited `1`, so `fail-on-findings: false` turned a crashed scan into a passing step.
+- The Action checks for Python 3.10 or later and fails with exit `2` and an error annotation if it is missing or older. Before, Python 3.9 crashed on import with exit `1`, and a missing interpreter gave an unclear failure.
 - ZWJ and ZWNJ are allowed only where they shape rendering: ZWJ inside emoji ZWJ sequences, and either joiner between two characters of one cursive or conjunct-forming script (Arabic, Syriac, Thaana, N'Ko, Mongolian, the Indic scripts, Tibetan, Myanmar, Khmer). Before, a joiner was allowed between any two non-ASCII characters, so text could split keywords and hide about 1.58 bits per letter gap in accented Latin, Cyrillic, Greek or CJK text (e.g. `café`+ZWNJ+`é` or `при`+ZWJ+`вет`).
+
+### Security
+- Text output escapes control and format characters in file names. Before, a file named with terminal escape sequences or a newline could rewrite or forge terminal output.
 
 ## [1.3.0] - 2026-10-12
 

@@ -43,7 +43,17 @@ runs:
           echo "::error title=Invalid input::fail-on-findings must be true or false"
           exit 2
         fi
-        py="$(command -v python3 || command -v python)"
+        py="$(command -v python3 || command -v python || true)"
+        if [ -z "$py" ]; then
+          echo "::error title=Python not found::unicode-smuggling-guard needs Python 3.10 or later on the runner"
+          exit 2
+        fi
+        # Older interpreters fail on import with a traceback (exit 1), which fail-on-findings: false would hide.
+        if ! "$py" -I -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
+          found="$("$py" -I -c 'import platform; print(platform.python_version())' || echo unknown)"
+          echo "::error title=Unsupported Python::unicode-smuggling-guard needs Python 3.10 or later, found $found"
+          exit 2
+        fi
         args=(--format github --summary "$GITHUB_STEP_SUMMARY")
         for category in $USG_IGNORE; do args+=(--ignore "$category"); done
         if [ -n "$USG_PRESET" ]; then args+=(--preset "$USG_PRESET"); fi

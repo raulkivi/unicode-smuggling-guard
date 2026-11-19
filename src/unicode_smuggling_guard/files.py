@@ -88,7 +88,10 @@ def read_text(path: str, max_bytes: int = MAX_BYTES) -> str | Skipped:
     UTF-8 is the default; UTF-16 and UTF-32 are recognised by their byte order mark.
     Anything else with a NUL byte is treated as binary.
     """
-    data = _read_bytes(path, max_bytes)
+    try:
+        data = _read_bytes(path, max_bytes)
+    except OSError as error:
+        return Skipped(f'cannot be read: {error.strerror or type(error).__name__}')
     if data is None:
         return Skipped(f'larger than {max_bytes:,} bytes')
     wide = _wide_encoding(data)
