@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 - The PyPI classifier is now "Development Status :: 4 - Beta" instead of "5 - Production/Stable".
 
+### Fixed
+- Unassigned default-ignorable code points U+E0080–E00FF and U+E01F0–E0FFF, which render blank, are reported as `invisible`.
+
 ### Security
 - Text output escapes control and format characters in file names. Before, a file named with terminal escape sequences or a newline could rewrite or forge terminal output.
 
