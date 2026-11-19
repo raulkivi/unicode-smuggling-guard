@@ -89,7 +89,18 @@ def _findings(path: str, text: str) -> list[Finding]:
     return sorted(findings, key=lambda f: (f.line, f.column))
 
 
+def _tolerate_unencodable_output() -> None:
+    """Escape what the stream's encoding cannot represent instead of aborting the scan.
+
+    Piped Windows output uses the locale code page, and findings quote decoded payloads and file names.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(errors='backslashreplace')
+
+
 def main(argv: list[str] | None = None) -> int:
+    _tolerate_unencodable_output()
     args = _parser().parse_args(argv)
     try:
         return _run(args)
