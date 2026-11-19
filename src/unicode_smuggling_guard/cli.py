@@ -3,6 +3,7 @@
 import argparse
 import os
 import sys
+import traceback
 from collections.abc import Sequence
 
 from . import __version__
@@ -22,7 +23,8 @@ from .tokens import scan_control_tokens
 
 PROG = 'unicode-smuggling-guard'
 
-EXIT_CLEAN, EXIT_FOUND, EXIT_USAGE = 0, 1, 2
+# EXIT_ERROR shares EXIT_USAGE's value: both mean the scan did not complete, so findings (1) stay distinct.
+EXIT_CLEAN, EXIT_FOUND, EXIT_USAGE, EXIT_ERROR = 0, 1, 2, 2
 
 _FORMATTERS = {'text': format_text, 'github': format_github}
 
@@ -88,6 +90,15 @@ def _findings(path: str, text: str) -> list[Finding]:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    try:
+        return _run(args)
+    except Exception as error:  # noqa: BLE001 - a crash must not look like findings (exit 1)
+        traceback.print_exc()
+        print(f'{PROG}: internal error: {type(error).__name__}: {error}', file=sys.stderr)
+        return EXIT_ERROR
+
+
+def _run(args: argparse.Namespace) -> int:
     missing = [p for p in args.paths if p != STDIN and not os.path.exists(p)]
     if missing:
         print(f'{PROG}: no such file or directory: {", ".join(missing)}', file=sys.stderr)

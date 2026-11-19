@@ -1,5 +1,7 @@
 # Changelog
 
+Last changed: 2026-11-19 · Source: <https://github.com/raulkivi/unicode-smuggling-guard>
+
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
@@ -8,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - The PyPI classifier is now "Development Status :: 4 - Beta" instead of "5 - Production/Stable".
+
+### Fixed
+- A file that exists but cannot be read (permissions, removed mid-scan) is reported as not scanned. Before, the scanner crashed with a traceback and exit `1`, which looked like findings. The usual rules apply: an error for agent files, standard input and named paths, a warning for files found in a directory.
+- Unexpected internal errors, such as an unwritable `--summary` path, print a traceback and exit `2`. Before, they exited `1`, so `fail-on-findings: false` turned a crashed scan into a passing step.
+- The Action checks for Python 3.10 or later and fails with exit `2` and an error annotation if it is missing or older. Before, Python 3.9 crashed on import with exit `1`, and a missing interpreter gave an unclear failure.
 
 ## [1.3.0] - 2026-10-12
 
