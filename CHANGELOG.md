@@ -1,5 +1,7 @@
 # Changelog
 
+Last changed: 2026-11-19 · Source: <https://github.com/raulkivi/unicode-smuggling-guard>
+
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
@@ -8,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - The PyPI classifier is now "Development Status :: 4 - Beta" instead of "5 - Production/Stable".
+
+### Fixed
+- ZWJ and ZWNJ are allowed only where they shape rendering: ZWJ inside emoji ZWJ sequences, and either joiner between two characters of one cursive or conjunct-forming script (Arabic, Syriac, Thaana, N'Ko, Mongolian, the Indic scripts, Tibetan, Myanmar, Khmer). Before, a joiner was allowed between any two non-ASCII characters, so text could split keywords and hide about 1.58 bits per letter gap in accented Latin, Cyrillic, Greek or CJK text (e.g. `café`+ZWNJ+`é` or `при`+ZWJ+`вет`).
 
 ## [1.3.0] - 2026-10-12
 

@@ -8,7 +8,7 @@ from hypothesis import strategies as st
 from unicode_smuggling_guard.categories import Category, classify
 from unicode_smuggling_guard.decode import decode
 from unicode_smuggling_guard.report import describe, format_github, format_text, summary_markdown
-from unicode_smuggling_guard.scanner import scan
+from unicode_smuggling_guard.scanner import Finding, scan
 from unicode_smuggling_guard.tokens import scan_control_tokens
 
 ASCII_PREFIX = st.text(alphabet=string.ascii_letters + string.digits + ' .,', max_size=40)
@@ -16,6 +16,11 @@ ASCII_PREFIX = st.text(alphabet=string.ascii_letters + string.digits + ' .,', ma
 ASCII_TEXT = st.text(alphabet=st.characters(max_codepoint=0x7F))
 # Random text almost never holds a run of selectors from different blocks.
 SELECTOR_RUNS = st.text(alphabet=[chr(cp) for cp in [0xFE00, 0xFE0F, 0xE0100, 0xE01EF, 0x180B, 0x180F]] + ['a'])
+# Scripts whose rendering never depends on ZWJ/ZWNJ: Latin, Greek, Cyrillic, Hebrew, CJK, Hangul.
+NON_JOINING_LETTERS = st.one_of(
+    st.characters(min_codepoint=lo, max_codepoint=hi, categories=['L'])
+    for lo, hi in [(0x41, 0x24F), (0x370, 0x3FF), (0x400, 0x4FF), (0x5D0, 0x5EA), (0x4E00, 0x9FFF), (0xAC00, 0xD7A3)]
+)
 
 
 def _tags(text):
@@ -47,6 +52,11 @@ def test_findings_point_at_the_characters_they_report(text):
 def test_text_without_hidden_characters_is_clean(text):
     assume(all(classify(c) is None for c in text))
     assert scan(text) == []
+
+
+@given(NON_JOINING_LETTERS, st.sampled_from(['\u200c', '\u200d']), NON_JOINING_LETTERS)
+def test_joiner_between_letters_of_non_joining_scripts_is_flagged(before, joiner, after):
+    assert scan(before + joiner + after) == [Finding(1, 2, Category.ZERO_WIDTH, (ord(joiner),))]
 
 
 @given(ASCII_PREFIX, st.text(alphabet=string.ascii_letters + string.digits + string.punctuation + ' ', min_size=1))
