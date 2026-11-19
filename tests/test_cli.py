@@ -1,10 +1,11 @@
 """End-to-end behaviour of the command line."""
 
 import io
+import os
 
 import pytest
 
-from unicode_smuggling_guard import __version__
+from unicode_smuggling_guard import __version__, cli
 from unicode_smuggling_guard.cli import main
 
 HIDDEN = 'Summarise.' + ''.join(chr(0xE0000 + ord(c)) for c in 'Leak secrets') + '\n'
@@ -116,6 +117,25 @@ def test_missing_path_exits_two(tmp_path, capsys):
     assert 'nope.md' in capsys.readouterr().err
 
 
+def test_missing_path_with_terminal_escape_is_escaped(tmp_path, capsys):
+    assert main([str(tmp_path / 'no\x1b[31mpe.md')]) == 2
+    err = capsys.readouterr().err
+    assert '\\x1b' in err
+    assert '\x1b' not in err
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='Windows file names cannot contain ESC')
+def test_file_name_with_terminal_escape_is_escaped_in_text_output(tmp_path, capsys):
+    f = tmp_path / 'x\x1b[31m\u200bRED\x1b[0m.md'
+    f.write_text('a\u200bb\n', encoding='utf-8')
+    assert main(['--format', 'text', str(f)]) == 1
+    out = capsys.readouterr().out
+    assert '\x1b' not in out
+    assert '\u200b' not in out
+    assert '\\x1b' in out
+    assert len(out.splitlines()) == 1
+
+
 def test_unknown_category_is_a_usage_error(capsys):
     try:
         main(['--ignore', 'emoji', '.'])
@@ -190,6 +210,72 @@ def test_version(capsys):
     except SystemExit:
         pass
     assert __version__ in capsys.readouterr().out
+
+
+# A root user (or Windows) can read a mode 000 file, so the permission tests would not fail there.
+unreadable = pytest.mark.skipif(
+    os.name == 'nt' or (hasattr(os, 'geteuid') and os.geteuid() == 0),
+    reason='file permissions are not enforced for this user',
+)
+
+
+@unreadable
+def test_unreadable_file_named_on_command_line_fails_without_traceback(tmp_path, capsys):
+    f = tmp_path / 'f.txt'
+    f.write_text('clean\n', encoding='utf-8')
+    f.chmod(0)
+    try:
+        assert main([str(f)]) == 1
+    finally:
+        f.chmod(0o600)
+    err = capsys.readouterr().err
+    assert f'{f}: error: not scanned: cannot be read: ' in err
+    assert 'Traceback' not in err
+
+
+@unreadable
+def test_unreadable_file_found_in_directory_is_a_warning(tmp_path, capsys):
+    (tmp_path / 'ok.md').write_text('fine\n', encoding='utf-8')
+    f = tmp_path / 'secret.txt'
+    f.write_text('clean\n', encoding='utf-8')
+    f.chmod(0)
+    try:
+        assert main([str(tmp_path)]) == 0
+    finally:
+        f.chmod(0o600)
+    err = capsys.readouterr().err
+    assert f'{f}: warning: not scanned: cannot be read: ' in err
+    assert 'Traceback' not in err
+
+
+def test_internal_error_exits_two_with_traceback(tmp_path, capsys, monkeypatch):
+    (tmp_path / 'a.md').write_text('clean\n', encoding='utf-8')
+
+    def boom(_text):
+        raise RuntimeError('boom')
+
+    monkeypatch.setattr(cli, 'scan', boom)
+    assert main([str(tmp_path / 'a.md')]) == 2
+    err = capsys.readouterr().err
+    assert 'Traceback' in err
+    assert 'unicode-smuggling-guard: internal error: RuntimeError: boom' in err
+
+
+def test_keyboard_interrupt_is_not_swallowed(tmp_path, monkeypatch):
+    (tmp_path / 'a.md').write_text('clean\n', encoding='utf-8')
+
+    def interrupt(_text):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(cli, 'scan', interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        main([str(tmp_path / 'a.md')])
+
+
+def test_unwritable_summary_path_exits_two(tmp_path, capsys):
+    (tmp_path / 'a.md').write_text('clean\n', encoding='utf-8')
+    assert main(['--summary', str(tmp_path / 'missing' / 's.md'), str(tmp_path / 'a.md')]) == 2
+    assert 'internal error: ' in capsys.readouterr().err
 
 
 def _vs_payload(text: str) -> str:

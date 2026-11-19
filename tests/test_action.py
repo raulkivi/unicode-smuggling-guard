@@ -46,10 +46,10 @@ def _plant_decoy(directory):
     (package / 'cli.py').write_text(DECOY, encoding='utf-8')
 
 
-def _run_action(workspace, *, fail='true', extra_env=None):
+def _run_action(workspace, *, fail='true', extra_env=None, path=None):
     summary = workspace.parent / 'summary.md'
     env = {
-        'PATH': os.path.dirname(sys.executable) + os.pathsep + os.environ.get('PATH', ''),
+        'PATH': path or os.path.dirname(sys.executable) + os.pathsep + os.environ.get('PATH', ''),
         'GITHUB_ACTION_PATH': str(ROOT),
         'GITHUB_STEP_SUMMARY': str(summary),
         'GITHUB_WORKSPACE': str(workspace),
@@ -60,7 +60,8 @@ def _run_action(workspace, *, fail='true', extra_env=None):
         **(extra_env or {}),
     }
     return subprocess.run(
-        ['bash', '-c', _run_script()], cwd=workspace, env=env, capture_output=True, text=True, check=False,
+        [shutil.which('bash'), '-c', _run_script()],
+        cwd=workspace, env=env, capture_output=True, text=True, check=False,
     )
 
 
@@ -112,3 +113,41 @@ def test_fail_on_findings_rejects_other_values(workspace, value):
     result = _run_action(workspace, fail=value)
     assert result.returncode == 2
     assert 'fail-on-findings' in result.stdout
+
+
+def _fake_python(directory, version):
+    """A `python3` that fails the 3.10 check and reports `version`, standing in for an old runner."""
+    directory.mkdir()
+    fake = directory / 'python3'
+    fake.write_text(
+        '#!/bin/sh\n'
+        'case "$*" in\n'
+        f'  *version_info*) exit 1 ;;\n'
+        f'  *) echo {version} ;;\n'
+        'esac\n',
+        encoding='utf-8',
+    )
+    fake.chmod(0o755)
+    return directory
+
+
+@pytest.mark.parametrize('fail', ['true', 'false'])
+def test_old_python_fails_with_exit_two(workspace, tmp_path, fail):
+    fake = _fake_python(tmp_path / 'old', '3.9.18')
+    path = str(fake) + os.pathsep + os.path.dirname(sys.executable) + os.pathsep + os.environ.get('PATH', '')
+    result = _run_action(workspace, fail=fail, path=path)
+    assert result.returncode == 2
+    expected = '::error title=Unsupported Python::unicode-smuggling-guard needs Python 3.10 or later, found 3.9.18'
+    assert expected in result.stdout
+
+
+def test_missing_python_fails_with_exit_two(workspace, tmp_path):
+    tools = tmp_path / 'tools'
+    tools.mkdir()
+    for tool in ('tr', 'printf'):
+        found = shutil.which(tool)
+        if found:
+            (tools / tool).symlink_to(found)
+    result = _run_action(workspace, fail='false', path=str(tools))
+    assert result.returncode == 2
+    assert '::error title=Python not found::' in result.stdout

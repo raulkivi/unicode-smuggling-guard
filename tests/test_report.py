@@ -4,6 +4,7 @@ from unicode_smuggling_guard.categories import Category
 from unicode_smuggling_guard.report import (
     NotScanned,
     describe,
+    escape_path,
     format_github,
     format_not_scanned_github,
     format_not_scanned_text,
@@ -135,3 +136,45 @@ def test_summary_lists_files_not_scanned():
 
 def test_summary_escapes_markdown_in_skipped_path():
     assert '| \\[x\\]\\(y\\) |' in summary_markdown([], [NotScanned('[x](y)', 'r', fatal=False)])
+
+
+def test_text_format_escapes_terminal_escape_in_path():
+    line = format_text('x\x1b[31m.txt', ZWSP)
+    assert '\\x1b' in line
+    assert '\x1b' not in line
+
+
+def test_text_format_escapes_newline_in_path():
+    # A raw newline would let a file name forge extra output lines.
+    line = format_text('a\nb.txt', ZWSP)
+    assert '\\n' in line
+    assert '\n' not in line
+
+
+def test_text_format_escapes_bidi_control_in_path():
+    assert '\\u202e' in format_text('a\u202eb.txt', ZWSP)
+
+
+def test_text_format_keeps_printable_path_unchanged():
+    detail = ': zero-width: 1 hidden character U+200B ZERO WIDTH SPACE'
+    assert format_text('\u00fcber/\u4e00.md', ZWSP) == '\u00fcber/\u4e00.md:1:4' + detail
+    assert format_text('dir name/a.md', ZWSP) == 'dir name/a.md:1:4' + detail
+
+
+def test_not_scanned_text_escapes_terminal_escape_in_path():
+    line = format_not_scanned_text(NotScanned('x\x1b[31m.bin', 'contains NUL bytes', fatal=False))
+    assert '\\x1b' in line
+    assert '\x1b' not in line
+
+
+def test_escape_path_leaves_printable_text_and_does_not_truncate():
+    path = 'dir name/\u00fcber/' + 'x' * 300
+    assert escape_path(path) == path
+
+
+def test_escape_path_uses_unicode_escapes_for_non_printable():
+    assert escape_path('a\x00\u200fb') == 'a\\x00\\u200fb'
+
+
+def test_github_format_path_is_unchanged_for_plain_path():
+    assert format_github('docs/a.md', ZWSP).startswith('::error file=docs/a.md,line=1,col=4,')
