@@ -145,7 +145,7 @@ Anything else in these categories is reported. A run of selectors after an emoji
 
 Decoded payloads are attacker-controlled. The scanner escapes them for each output:
 
-- terminal: control characters become `\x1b`-style escapes
+- terminal: control characters in payloads and file names become `\x1b`-style escapes
 - GitHub annotations: `%`, CR and LF are encoded, so a payload cannot start a new workflow command
 - job summary: Markdown syntax is backslash-escaped, so a payload cannot render links or images
 

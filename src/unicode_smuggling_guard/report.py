@@ -21,10 +21,17 @@ def _codepoint(cp: int) -> str:
     return f'U+{cp:04X}'
 
 
+def _escape_char(c: str) -> str:
+    return c if c.isprintable() else c.encode('unicode_escape').decode('ascii')
+
+
+def escape_path(path: str) -> str:
+    """Escapes non-printable characters so a file name cannot drive the terminal or forge lines."""
+    return ''.join(_escape_char(c) for c in path)
+
+
 def _printable(text: str) -> str:
-    escaped = ''.join(
-        c if c.isprintable() else c.encode('unicode_escape').decode('ascii') for c in text
-    )
+    escaped = ''.join(_escape_char(c) for c in text)
     return escaped if len(escaped) <= _PAYLOAD_PREVIEW else escaped[:_PAYLOAD_PREVIEW] + '\u2026'
 
 
@@ -44,7 +51,7 @@ def describe(finding: Finding) -> str:
 
 
 def format_text(path: str, finding: Finding) -> str:
-    return f'{path}:{finding.line}:{finding.column}: {describe(finding)}'
+    return f'{escape_path(path)}:{finding.line}:{finding.column}: {describe(finding)}'
 
 
 def _escape_command_data(text: str) -> str:
@@ -83,7 +90,7 @@ def _level(skipped: NotScanned) -> str:
 
 
 def format_not_scanned_text(skipped: NotScanned) -> str:
-    return f'{skipped.path}: {_level(skipped)}: not scanned: {skipped.reason}'
+    return f'{escape_path(skipped.path)}: {_level(skipped)}: not scanned: {skipped.reason}'
 
 
 def format_not_scanned_github(skipped: NotScanned) -> str:

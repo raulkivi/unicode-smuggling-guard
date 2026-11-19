@@ -11,6 +11,7 @@ from .categories import Category
 from .files import STDIN, Skipped, iter_files, read_text
 from .report import (
     NotScanned,
+    escape_path,
     format_github,
     format_not_scanned_github,
     format_not_scanned_text,
@@ -90,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     missing = [p for p in args.paths if p != STDIN and not os.path.exists(p)]
     if missing:
-        print(f'{PROG}: no such file or directory: {", ".join(missing)}', file=sys.stderr)
+        print(f'{PROG}: no such file or directory: {", ".join(map(escape_path, missing))}', file=sys.stderr)
         return EXIT_USAGE
 
     ignored = {Category(value) for value in args.ignore}

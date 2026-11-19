@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 - Unassigned default-ignorable code points U+E0080–E00FF and U+E01F0–E0FFF, which render blank, are reported as `invisible`.
 
+### Security
+- Text output escapes control and format characters in file names. Before, a file named with terminal escape sequences or a newline could rewrite or forge terminal output.
+
 ## [1.3.0] - 2026-10-12
 
 ### Added

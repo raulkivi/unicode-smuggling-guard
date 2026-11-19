@@ -1,6 +1,7 @@
 """End-to-end behaviour of the command line."""
 
 import io
+import os
 
 import pytest
 
@@ -114,6 +115,25 @@ def test_skipped_files_are_listed_in_summary(tmp_path):
 def test_missing_path_exits_two(tmp_path, capsys):
     assert main([str(tmp_path / 'nope.md')]) == 2
     assert 'nope.md' in capsys.readouterr().err
+
+
+def test_missing_path_with_terminal_escape_is_escaped(tmp_path, capsys):
+    assert main([str(tmp_path / 'no\x1b[31mpe.md')]) == 2
+    err = capsys.readouterr().err
+    assert '\\x1b' in err
+    assert '\x1b' not in err
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='Windows file names cannot contain ESC')
+def test_file_name_with_terminal_escape_is_escaped_in_text_output(tmp_path, capsys):
+    f = tmp_path / 'x\x1b[31m\u200bRED\x1b[0m.md'
+    f.write_text('a\u200bb\n', encoding='utf-8')
+    assert main(['--format', 'text', str(f)]) == 1
+    out = capsys.readouterr().out
+    assert '\x1b' not in out
+    assert '\u200b' not in out
+    assert '\\x1b' in out
+    assert len(out.splitlines()) == 1
 
 
 def test_unknown_category_is_a_usage_error(capsys):
