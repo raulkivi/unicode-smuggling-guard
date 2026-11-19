@@ -276,3 +276,48 @@ def test_unwritable_summary_path_exits_two(tmp_path, capsys):
     (tmp_path / 'a.md').write_text('clean\n', encoding='utf-8')
     assert main(['--summary', str(tmp_path / 'missing' / 's.md'), str(tmp_path / 'a.md')]) == 2
     assert 'internal error: ' in capsys.readouterr().err
+
+
+def _vs_payload(text: str) -> str:
+    return ''.join(chr(0xFE00 + b if b < 16 else 0xE0100 + b - 16) for b in text.encode('utf-8'))
+
+
+@pytest.fixture
+def strict_cp1252(monkeypatch):
+    """Returns install(); call it inside the test, as pytest re-installs its capture streams after fixtures run."""
+
+    def install():
+        streams = {
+            name: io.TextIOWrapper(io.BytesIO(), encoding='cp1252', write_through=True)
+            for name in ('stdout', 'stderr')
+        }
+        for name, stream in streams.items():
+            monkeypatch.setattr(f'sys.{name}', stream)
+        return lambda name: streams[name].buffer.getvalue().decode('cp1252')
+
+    return install
+
+
+def test_unencodable_chat_token_does_not_crash_on_cp1252(tmp_path, strict_cp1252):
+    agent = tmp_path / '.claude' / 'a.md'
+    agent.parent.mkdir()
+    agent.write_text('<\uff5cUser\uff5c> hi\n', encoding='utf-8')
+    output = strict_cp1252()
+    assert main([str(agent)]) == 1
+    assert '\\uff5c' in output('stdout')
+
+
+def test_unencodable_decoded_payload_does_not_crash_on_cp1252(tmp_path, strict_cp1252):
+    f = tmp_path / 'a.md'
+    f.write_text('x\u4e00' + _vs_payload('\u4e00') + '\n', encoding='utf-8')
+    output = strict_cp1252()
+    assert main([str(f)]) == 1
+    assert '\\u4e00' in output('stdout')
+
+
+def test_unencodable_file_name_does_not_crash_on_cp1252(tmp_path, strict_cp1252):
+    f = tmp_path / '\u4e00.md'
+    f.write_text('a\u202eb\n', encoding='utf-8')
+    output = strict_cp1252()
+    assert main([str(f)]) == 1
+    assert '\\u4e00.md:1:2: bidi' in output('stdout')

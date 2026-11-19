@@ -115,3 +115,45 @@ jobs:
         run: |
           echo "::error::A package in the workspace replaced the scanner"
           exit 1
+
+  action-windows:
+    name: Action self-test (windows-latest)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Scan this repository
+        uses: ./
+
+      - name: Plant non-ASCII findings
+        # Windows pipes use the locale code page; these must be escaped, not crash the scan.
+        run: |
+          mkdir -p "$RUNNER_TEMP/planted-unicode/.claude"
+          python -c 'import sys; open(sys.argv[1], "w", encoding="utf-8").write("<\uff5cUser\uff5c> hi\n")' "$RUNNER_TEMP/planted-unicode/.claude/a.md"
+          python -c 'import sys; open(sys.argv[1], "w", encoding="utf-8").write("x\u4e00" + "".join(chr(0xFE00 + b if b < 16 else 0xE0100 + b - 16) for b in "\u4e00".encode()) + "\n")' "$RUNNER_TEMP/planted-unicode/b.md"
+
+      - name: Scan the planted files
+        id: planted
+        continue-on-error: true
+        uses: ./
+        with:
+          paths: ${{ runner.temp }}/planted-unicode
+
+      - name: Require findings without a crash
+        if: steps.planted.outcome != 'failure'
+        run: |
+          echo "::error::Action did not fail on non-ASCII findings"
+          exit 1
+
+      - name: Require the scan to finish on a piped code page
+        run: |
+          status=0
+          python -I -c 'import sys; sys.path.insert(0, sys.argv.pop(1)); from unicode_smuggling_guard.cli import main; sys.exit(main())' \
+            src "$RUNNER_TEMP/planted-unicode" > "$RUNNER_TEMP/out.txt" 2>&1 || status=$?
+          cat "$RUNNER_TEMP/out.txt"
+          [ "$status" -eq 1 ] && ! grep -q Traceback "$RUNNER_TEMP/out.txt"
