@@ -1,5 +1,7 @@
 # Changelog
 
+Last changed: 2026-11-19 · Source: <https://github.com/raulkivi/unicode-smuggling-guard>
+
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
@@ -8,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - The PyPI classifier is now "Development Status :: 4 - Beta" instead of "5 - Production/Stable".
+
+### Fixed
+- On Windows, findings with non-ASCII text (decoded payloads, DeepSeek tokens, file names) no longer crash the scan when output goes to a pipe, as in the Action and pre-commit; unencodable characters are printed as `\uXXXX` escapes.
 
 ## [1.3.0] - 2026-10-12
 
